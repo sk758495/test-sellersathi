@@ -1,0 +1,81 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.navbar .btn {
+    background-color: transparent;
+}
+
+.admin_image {
+    width: 40px;
+    /* Adjust size as necessary */
+    height: 40px;
+    border-radius: 50%;
+    /* Make it circular */
+    margin-right: 10px;
+    /* Space between logo and text */
+}
+
+#toggleSidebar {
+    position: sticky!important;
+}
+
+
+/* Mobile Styles */
+
+@media (max-width: 768px) {
+    aside {
+        width: 100%;
+    }
+    .main-content {
+        margin-left: 0;
+    }
+    .nav-link {
+        padding: 10px;
+        font-size: 10px;
+    }
+    .navbar {
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+    }
+    .navbar .dropdown {
+        width: auto;
+        text-align: center;
+    }
+}
+
+
+/* Mobile View Adjustments */
+
+@media (max-width: 768px) {
+    #sidebar {
+        width: 100%;
+        left: -100%;
+    }
+    #sidebar.show {
+        left: 0;
+    }
+    #main-content {
+        transition: margin-left 0.3s ease, opacity 0.3s ease;
+    }
+    #main-content.hidden {
+        opacity: 0;
+        visibility: hidden;
+        /* Optional: To completely hide the content */
+    }
+    .admin_image {
+        width: 35px;
+        height: 35px;
+    }
+    /* Ensure the sidebar occupies full screen when toggled */
+    .navbar .dropdown-menu {
+        position: absolute;
+        top: 50px;
+    }
+}

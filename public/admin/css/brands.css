@@ -1,0 +1,313 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+.sidebar {
+    transition: width 0.2s;
+}
+
+.main-content {
+    overflow-y: auto;
+}
+
+h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.navbar .btn {
+    background-color: transparent;
+}
+
+.dropdown-toggle::after {
+    display: none;
+    /* Hide the dropdown arrow */
+}
+
+.admin_image {
+    width: 40px;
+    /* Adjust size as necessary */
+    height: 40px;
+    border-radius: 50%;
+    /* Make it circular */
+    margin-right: 10px;
+    /* Space between logo and text */
+}
+
+#toggleSidebar {
+    position: sticky!important;
+}
+
+
+/* Mobile Styles */
+
+@media (max-width: 768px) {
+    /* Adjust sidebar for smaller screens */
+    aside {
+        width: 100%;
+        /* Full width */
+        position: relative;
+        /* Allow it to be relative for stacking */
+    }
+    .main-content {
+        margin-left: 0;
+        /* Remove margin */
+    }
+    .nav-link {
+        /* Center text in nav links */
+        padding: 10px;
+        margin-left: -20px;
+        /* Adjust padding */
+        font-size: 10px;
+    }
+    /* Navbar */
+    .navbar {
+        flex-direction: column;
+        /* Stack navbar items */
+        align-items: center;
+        /* Center items */
+        padding: 10px;
+        /* Add padding for better spacing */
+    }
+    .navbar .dropdown {
+        width: auto;
+        /* Allow dropdown to adjust based on content */
+        text-align: center;
+        /* Center align dropdown items */
+        margin-top: 10px;
+        /* Space between dropdown and other items */
+    }
+    .navbar .btn {
+        width: auto;
+        /* Remove fixed width for better fitting */
+        margin-top: 5px;
+        /* Space above the button */
+        background-color: transparent;
+    }
+    /* Main content */
+    #main-content {
+        padding: 15px;
+        /* Adjust padding for mobile */
+    }
+    .admin_image {
+        width: 40px;
+        /* Adjust size as necessary */
+        height: 40px;
+        border-radius: 50%;
+        /* Make it circular */
+        margin-right: 10px;
+        /* Space between logo and text */
+    }
+    /* Adjust Admin Name and logo spacing */
+    .navbar-brand {
+        margin-top: 10px;
+        /* Space between logo and text */
+        text-align: center;
+        /* Center the admin name */
+    }
+}
+
+
+/* Table Styling */
+
+
+/* General styling for the main content area */
+
+#main-content {
+    padding: 20px;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+}
+
+
+/* Card styling */
+
+.card {
+    border-radius: 8px;
+    background-color: white;
+    border: 1px solid #ddd;
+}
+
+.card-header {
+    background-color: #343a40;
+    color: #fff;
+    padding: 10px 20px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.card-body {
+    padding: 0px;
+}
+
+
+/* Table styling */
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-bordered {
+    border: 1px solid #ddd;
+}
+
+.table-striped tbody tr:nth-child(odd) {
+    background-color: #f9f9f9;
+}
+
+.table-dark {
+    background-color: #343a40;
+    color: #fff;
+}
+
+
+/* Table headers */
+
+.table-dark th {
+    text-align: left;
+    padding: 12px 15px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.table-bordered td,
+.table-bordered th {
+    border: 1px solid #ddd;
+    padding: 8px 15px;
+}
+
+
+/* Table images */
+
+.table img {
+    max-width: 50px;
+    max-height: 50px;
+    object-fit: cover;
+    border-radius: 5px;
+}
+
+
+/* Text truncation for brand name */
+
+.text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* Button styling */
+
+.btn {
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 12px;
+    transition: background-color 0.3s, transform 0.2s ease-in-out;
+}
+
+.btn-sm {
+    padding: 3px 8px;
+    font-size: 12px;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+    transform: scale(1.05);
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+    transform: scale(1.05);
+}
+
+
+/* Responsive table */
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+
+/* Adding shadow effect to the card */
+
+.card.shadow-sm {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+
+/* Adjusting padding on the main content */
+
+#main-content h1 {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #343a40;
+}
+
+@media (max-width: 768px) {
+    .table-bordered td,
+    .table-bordered th {
+        border: 1px solid #ddd;
+        padding: 8px 15px;
+        font-size: 10px!important;
+    }
+    .table-dark th {
+        text-align: left;
+        padding: 12px 15px;
+        font-size: 8px!important;
+        font-weight: bold;
+    }
+    .btn {
+        border-radius: 5px;
+        padding: 5px 10px;
+        font-size: 8px!important;
+        transition: background-color 0.3s, transform 0.2s ease-in-out;
+        margin: 2px;
+    }
+    .btn-sm {
+        padding: 3px 8px;
+        font-size: 8px!important;
+    }
+}
+
+
+/* Mobile View Adjustments */
+
+@media (max-width: 768px) {
+    #sidebar {
+        width: 100%;
+        left: -100%;
+    }
+    #sidebar.show {
+        left: 0;
+    }
+    #main-content {
+        transition: margin-left 0.3s ease, opacity 0.3s ease;
+    }
+    #main-content.hidden {
+        opacity: 0;
+        visibility: hidden;
+        /* Optional: To completely hide the content */
+    }
+    .admin_image {
+        width: 35px;
+        height: 35px;
+    }
+    /* Ensure the sidebar occupies full screen when toggled */
+    .navbar .dropdown-menu {
+        position: absolute;
+        top: 50px;
+    }
+}

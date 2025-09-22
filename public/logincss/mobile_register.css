@@ -1,0 +1,58 @@
+body {
+    font-family: 'Poppins', sans-serif;
+    /* Set Poppins as the default font */
+}
+
+.mobile_register {
+    background: linear-gradient(135deg, #8c36e7 10%, #53e2f8 100%);
+    height: 100vh;
+    /* Full viewport height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    /* Text color for better contrast */
+}
+
+.register-form {
+    background-color: transparent;
+    /* Slightly transparent white background */
+    padding: 50px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border-top-right-radius: 90px;
+    border-bottom-left-radius: 90px;
+    width: 550px;
+}
+
+.register-form .form-label {
+    font-weight: bold;
+    /* Make labels bold for better visibility */
+}
+
+.register-form .form-control {
+    margin-bottom: 15px;
+    /* Spacing between inputs */
+}
+
+@media (max-width: 768px) {
+    .register-form {
+        padding: 40px;
+        /* Reduced padding for smaller screens */
+        width: auto;
+        border-top-right-radius: 60px;
+        border-bottom-left-radius: 60px;
+        /* Take up more width on mobile */
+    }
+}
+
+@media (max-width: 576px) {
+    .register-form {
+        padding: 30px;
+        /* Further reduced padding for very small screens */
+        /* Smaller border radius */
+        width: auto;
+        border-top-right-radius: 60px;
+        border-bottom-left-radius: 60px;
+        /* Take up almost full width */
+    }
+}

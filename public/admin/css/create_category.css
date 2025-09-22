@@ -1,0 +1,355 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+.main-content {
+    overflow-y: auto;
+}
+
+h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.navbar .btn {
+    background-color: transparent;
+}
+
+.admin_image {
+    width: 40px;
+    /* Adjust size as necessary */
+    height: 40px;
+    border-radius: 50%;
+    /* Make it circular */
+    margin-right: 10px;
+    /* Space between logo and text */
+}
+
+#toggleSidebar {
+    position: sticky!important;
+}
+
+
+/* Mobile Styles */
+
+@media (max-width: 768px) {
+    /* Adjust sidebar for smaller screens */
+    aside {
+        width: 100%;
+        /* Full width */
+        position: relative;
+        /* Allow it to be relative for stacking */
+    }
+    .main-content {
+        margin-left: 0;
+        /* Remove margin */
+    }
+    .nav-link {
+        /* Center text in nav links */
+        padding: 10px;
+        /* Adjust padding */
+        font-size: 10px;
+    }
+    /* Navbar */
+    .navbar {
+        flex-direction: column;
+        /* Stack navbar items */
+        align-items: center;
+        /* Center items */
+        padding: 10px;
+        /* Add padding for better spacing */
+    }
+    .navbar .dropdown {
+        width: auto;
+        /* Allow dropdown to adjust based on content */
+        text-align: center;
+        /* Center align dropdown items */
+        margin-top: 10px;
+        /* Space between dropdown and other items */
+    }
+    .navbar .btn {
+        width: auto;
+        /* Remove fixed width for better fitting */
+        margin-top: 5px;
+        /* Space above the button */
+        background-color: transparent;
+    }
+    /* Main content */
+    #main-content {
+        padding: 15px;
+        /* Adjust padding for mobile */
+    }
+    .admin_image {
+        width: 40px;
+        /* Adjust size as necessary */
+        height: 40px;
+        border-radius: 50%;
+        /* Make it circular */
+        margin-right: 10px;
+        /* Space between logo and text */
+    }
+    /* Adjust Admin Name and logo spacing */
+    .navbar-brand {
+        margin-top: 10px;
+        /* Space between logo and text */
+        text-align: center;
+        /* Center the admin name */
+    }
+}
+
+.top-title {
+    font-size: 1.5rem;
+    /* Adjust font size */
+    font-weight: bold;
+    /* Make the text bold */
+    background: linear-gradient(45deg, #fd6b02, #f70379, #ffdd00);
+    /* Gradient from orange to pink */
+    color: transparent;
+    /* Make the text transparent so we can show the gradient through it */
+    -webkit-background-clip: text;
+    /* Use background clip to make gradient apply to text */
+    background-clip: text;
+    /* Ensure the background gradient clips to the text */
+    text-transform: uppercase;
+    /* Uppercase text for more impact */
+    letter-spacing: 2px;
+    /* Add spacing between letters for style */
+    padding: 20px 0;
+    /* Add padding above and below the text */
+    box-shadow: 0 0px 2px rgba(0, 0, 0, 0.1);
+    /* Add subtle shadow for depth */
+    border-radius: 8px;
+    /* Optional: add rounded corners */
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+    /* Optional: text shadow for better visibility */
+    background-size: 200% 100%;
+    /* Stretch the gradient over 200% width */
+    background-position: left center;
+    /* Position the gradient to the left (half) */
+}
+
+
+/* General styling for the main content area */
+
+#main-content {
+    padding: 20px;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+}
+
+
+/* Card styling */
+
+.card {
+    border-radius: 8px;
+    background-color: white;
+    border: 1px solid #ddd;
+}
+
+.card-header {
+    background-color: #343a40;
+    color: #fff;
+    padding: 10px 20px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.card-body {
+    padding: 0px;
+}
+
+h1 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+form {}
+
+.form-box {
+    margin: 20px;
+    font-weight: 600;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.image-upload {
+    display: flex;
+    flex-direction: column;
+}
+
+.image-upload input[type="file"] {
+    padding: 5px;
+    border: none;
+    background-color: #f8f8f8;
+}
+
+.image-upload label {
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.box {
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px dashed #ddd;
+    border-radius: 8px;
+}
+
+.box h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #444;
+}
+
+.description-box {
+    margin-bottom: 20px;
+}
+
+.description-box label {
+    font-weight: bold;
+}
+
+.description-box textarea {
+    font-family: 'Roboto', sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.form-submit {
+    grid-column: span 2;
+    display: flex;
+    justify-content: center;
+    margin-top: 40px;
+}
+
+.form-submit button {
+    background-color: #5cb85c;
+    border: none;
+    color: white;
+    padding: 12px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+    margin-bottom: 20px;
+}
+
+.form-submit button:hover {
+    background-color: #4cae4c;
+}
+
+.font-size-selector {
+    margin-top: 10px;
+}
+
+.font-size-selector label {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.font-size-selector select {
+    padding: 5px;
+}
+
+
+/* Mobile Styles for the Form */
+
+@media (max-width: 768px) {
+    /* General Layout */
+    .form-box {
+        grid-template-columns: 1fr;
+        /* Stack the form fields vertically */
+    }
+    .form-group {
+        margin-bottom: 15px;
+        /* Add some space between form fields */
+    }
+    .form-group label {
+        font-size: 16px;
+        /* Slightly larger labels for better readability */
+        margin-bottom: 8px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 12px;
+        /* Increase padding for touch-friendliness */
+        font-size: 16px;
+        /* Larger font size for easier reading */
+        width: 100%;
+        /* Make inputs fill the container width */
+        box-sizing: border-box;
+    }
+    .image-upload input[type="file"] {
+        padding: 8px;
+        /* Make file inputs more accessible on mobile */
+    }
+    .image-upload label {
+        margin-bottom: 12px;
+        /* Increase spacing for better clarity */
+    }
+    .image-preview img {
+        width: 80px;
+        /* Make preview images smaller on mobile */
+        height: 80px;
+    }
+    /* Adjust textarea sizes for better readability */
+    .description-box textarea {
+        font-size: 14px;
+        padding: 12px;
+    }
+    /* Form Button */
+    .form-submit button {
+        width: 100%;
+        /* Full width for the submit button */
+        padding: 14px;
+        /* Larger button for easier tapping */
+        font-size: 18px;
+        /* Larger text on button for mobile */
+    }
+    /* Adjust Image Preview and Upload Area */
+    .image-preview {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .image-preview img {
+        width: 60px;
+        /* Smaller image preview */
+        height: 60px;
+    }
+    /* Ensure the form fills the entire container */
+    #main-content {
+        padding: 10px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        font-size: 14px;
+        /* Slightly smaller input fonts for better fit */
+    }
+}
