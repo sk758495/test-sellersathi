@@ -192,10 +192,22 @@ private function initiateHdfcPayment(Request $request)
     if (!$cartValue) {
         return redirect()->route('user.cart')->with('error', 'Cart value not found.');
     }
+    
+    if (!$address) {
+        return redirect()->route('user.payment')->with('error', 'No address selected.');
+    }
 
     // Generate secure order ID
     $orderId = 'ORD' . strtoupper(bin2hex(random_bytes(8)));
     $amount = number_format($cartValue->total_price, 2, '.', '');
+
+    // Log payment initiation details
+    Log::info('Initiating HDFC payment:', [
+        'order_id' => $orderId,
+        'amount' => $amount,
+        'user_id' => $user->id,
+        'address_id' => $address->id
+    ]);
 
     // Get credentials from config
     $merchantId = config('payment.hdfc.merchant_id');
@@ -229,6 +241,12 @@ private function initiateHdfcPayment(Request $request)
                     'payment_user_id' => $user->id,
                     'payment_address_id' => $address->id
                 ]);
+                
+                Log::info('Payment session stored:', [
+                    'hdfc_txn_ref' => $orderId,
+                    'payment_user_id' => $user->id,
+                    'payment_address_id' => $address->id
+                ]);
 
                 return redirect($res['paymentUrl']);
             } else {
@@ -247,7 +265,11 @@ public function handleHdfcResponse(Request $request)
 {
     $status = $request->input('status');
     $txnRef = $request->input('orderId');
+    $transactionId = $request->input('transactionId') ?? $request->input('cf_payment_id') ?? $txnRef;
     $sessionTxnRef = session('hdfc_txn_ref');
+
+    // Log all received parameters for debugging
+    Log::info('HDFC Response received:', $request->all());
 
     // Verify transaction reference
     if ($txnRef !== $sessionTxnRef) {
@@ -261,11 +283,23 @@ public function handleHdfcResponse(Request $request)
             $userId = session('payment_user_id');
             $addressId = session('payment_address_id');
             
+            // Also try to get address from selected_address session if payment_address_id is null
+            if (!$addressId) {
+                $selectedAddress = session('selected_address');
+                $addressId = $selectedAddress ? $selectedAddress->id : null;
+            }
+            
             Log::info('HDFC Payment success - Session data:', [
                 'user_id' => $userId,
                 'address_id' => $addressId,
-                'txn_ref' => $txnRef
+                'txn_ref' => $txnRef,
+                'transaction_id' => $transactionId
             ]);
+            
+            if (!$userId || !$addressId) {
+                Log::error('Missing user or address data', ['user_id' => $userId, 'address_id' => $addressId]);
+                return redirect()->route('user.cart')->with('error', 'Session expired. Please try again.');
+            }
             
             $user = User::findOrFail($userId);
             $address = Address::findOrFail($addressId);
@@ -300,10 +334,16 @@ public function handleHdfcResponse(Request $request)
                     'total_price' => $totalPriceWithShipping,
                     'order_status' => 'Confirmed',
                     'order_id' => $txnRef,
-                    'transaction_id' => $txnRef
+                    'transaction_id' => $transactionId
                 ]);
 
                 $orderIds[] = $order->id;
+                
+                Log::info('Order created successfully:', [
+                    'order_id' => $order->id,
+                    'transaction_id' => $transactionId,
+                    'address_id' => $addressId
+                ]);
             }
 
             // Send confirmation emails
@@ -321,7 +361,12 @@ public function handleHdfcResponse(Request $request)
                             ->with('success', '🎉 Payment successful! Your order has been confirmed.');
                             
         } catch (\Exception $e) {
-            Log::error('Order creation failed after successful payment', ['error' => $e->getMessage(), 'txnRef' => $txnRef]);
+            Log::error('Order creation failed after successful payment', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'txnRef' => $txnRef,
+                'transactionId' => $transactionId
+            ]);
             return redirect()->route('user.cart')->with('error', 'Payment successful but order creation failed. Please contact support.');
         }
     } else {

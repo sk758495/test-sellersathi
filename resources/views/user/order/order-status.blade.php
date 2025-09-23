@@ -233,23 +233,25 @@
                             <div class="detail-item">
                                 <div class="detail-label">Transaction ID</div>
                                 <div class="detail-value">
-                                    @if($order->transaction_id)
+                                    @if($order->transaction_id && $order->transaction_id !== 'N/A')
                                         {{ $order->transaction_id }}
+                                    @elseif($order->order_id && $order->order_id !== 'N/A')
+                                        {{ $order->order_id }}
                                     @elseif(isset($order->hdfc_status['cf_payment_id']))
                                         {{ $order->hdfc_status['cf_payment_id'] }}
                                     @else
-                                        N/A
+                                        <span class="text-muted">Processing...</span>
                                     @endif
                                 </div>
                             </div>
                             @if(isset($order->hdfc_status))
                             <div class="detail-item">
                                 <div class="detail-label">Payment Status</div>
-                                <div class="detail-value">{{ $order->hdfc_status['status'] ?? 'Unknown' }}</div>
+                                <div class="detail-value">{{ $order->hdfc_status['status'] ?? 'Confirmed' }}</div>
                             </div>
                             <div class="detail-item">
                                 <div class="detail-label">Payment Gateway</div>
-                                <div class="detail-value">{{ $order->hdfc_status['payment_method']['type'] ?? 'HDFC' }}</div>
+                                <div class="detail-value">{{ $order->hdfc_status['payment_method']['type'] ?? 'HDFC Bank' }}</div>
                             </div>
                             @endif
                             @endif
@@ -257,9 +259,12 @@
                                 <div class="detail-label">Delivery Address</div>
                                 <div class="detail-value">
                                     @if($order->address)
-                                        {{ $order->address->address_line1 }}, {{ $order->address->city }}, {{ $order->address->state }} - {{ $order->address->postal_code }}
+                                        {{ $order->address->address_line1 }}
+                                        @if($order->address->address_line2), {{ $order->address->address_line2 }}@endif
+                                        <br>{{ $order->address->city }}, {{ $order->address->state }}
+                                        <br>{{ $order->address->country }} - {{ $order->address->postal_code }}
                                     @else
-                                        No address available
+                                        <span class="text-danger">Address not available</span>
                                     @endif
                                 </div>
                             </div>
