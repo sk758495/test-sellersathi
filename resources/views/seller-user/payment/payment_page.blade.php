@@ -149,24 +149,21 @@
             <!-- Payment Method Selection -->
             <div class="payment-method">
                 <label>
-                    <input type="radio" name="payment" id="upi" class="payment-option" disabled>
-                    UPI (Currently Disabled)
-                </label>
-                <label>
                     <input type="radio" name="payment" id="cod" class="payment-option" checked>
                     Cash on Delivery (COD)
                 </label>
+                <label>
+                    <input type="radio" name="payment" id="hdfc" class="payment-option">
+                    Pay Online via HDFC
+                </label>
             </div>
 
-            <!-- UPI Options (hidden by default) -->
-            <div class="upi-options" id="upi-options">
-                <h2>Pay with UPI</h2>
-                <div class="qr-code">
-                    <img src="https://via.placeholder.com/150" alt="QR Code">
-                    <p>Scan this QR code with your UPI app</p>
-                </div>
-                <button type="button" class="btn" id="pay-with-upi">Pay via UPI App</button>
-                <button type="submit" class="btn btn-submit">Submit Payment</button>
+            <!-- HDFC Options -->
+            <div class="hdfc-options" id="hdfc-options" style="display: none;">
+                <h2>HDFC Payment Gateway</h2>
+                <h1>Total Price: <strong>₹{{ number_format($totalAmount ?? 0, 2) }}</strong></h1>
+                <p>You will be redirected to HDFC secure payment page</p>
+                <button type="submit" class="btn btn-submit">Pay Now</button>
             </div>
 
             <!-- COD Options -->
@@ -180,24 +177,24 @@
     </div>
 
     <script>
-        // Handle switching between UPI and COD options
+        // Handle switching between payment options
         document.addEventListener('DOMContentLoaded', function () {
-            const upiOption = document.getElementById('upi');
+            const hdfcOption = document.getElementById('hdfc');
             const codOption = document.getElementById('cod');
-            const upiOptions = document.getElementById('upi-options');
+            const hdfcOptions = document.getElementById('hdfc-options');
             const codOptions = document.getElementById('cod-options');
             const paymentMethodInput = document.getElementById('payment_method');
 
             // Function to toggle payment method display
             function togglePaymentMethod() {
-                if (upiOption.checked) {
-                    upiOptions.style.display = 'block';
+                if (hdfcOption.checked) {
+                    hdfcOptions.style.display = 'block';
                     codOptions.style.display = 'none';
-                    paymentMethodInput.value = 'UPI'; // Set payment method to UPI
+                    paymentMethodInput.value = 'hdfc';
                 } else if (codOption.checked) {
-                    upiOptions.style.display = 'none';
+                    hdfcOptions.style.display = 'none';
                     codOptions.style.display = 'block';
-                    paymentMethodInput.value = 'COD'; // Set payment method to COD
+                    paymentMethodInput.value = 'COD';
                 }
             }
 
@@ -205,7 +202,7 @@
             togglePaymentMethod();
 
             // Add event listeners to radio buttons to handle changes
-            upiOption.addEventListener('change', togglePaymentMethod);
+            hdfcOption.addEventListener('change', togglePaymentMethod);
             codOption.addEventListener('change', togglePaymentMethod);
         });
     </script>

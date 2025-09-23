@@ -2,205 +2,263 @@
 <html lang="en">
 
 <head>
+
     <title>Gujju E Market</title>
+
     @include('user.head')
+
+</head>
+
+<body>
+
+    @include('user.navbar')
+
     <style>
-        /* Basic Reset */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        .payment-container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            animation: slideUp 0.6s ease-out;
         }
 
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 500px;
+        .payment-header {
+            background: linear-gradient(135deg, #eb660d 0%, #c9674a 100%);
+            padding: 40px;
+            text-align: center;
+            color: white;
         }
 
         .page-title {
-            font-size: 24px;
-            font-weight: 600;
-            text-align: center;
-            color: #333;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
         }
 
         .page-subtitle {
             font-size: 16px;
-            text-align: center;
-            color: #777;
-            margin-bottom: 20px;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .payment-content {
+            padding: 40px;
         }
 
         .payment-method {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
-        }
-
-        .payment-option {
-            margin-right: 10px;
+            margin-bottom: 30px;
         }
 
         .payment-method label {
-            font-size: 18px;
-            color: #555;
+            display: block;
+            background: #f8f9fa;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
             cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
         }
 
-        .upi-options, .cod-options {
-            display: none;
+        .payment-method label:hover {
+            border-color: #F4631E;
+            background: #fff8f5;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(244, 99, 30, 0.15);
+        }
+
+        .payment-method input[type="radio"]:checked+span,
+        .payment-method label:has(input:checked) {
+            border-color: #F4631E;
+            background: #fff8f5;
+            box-shadow: 0 8px 25px rgba(244, 99, 30, 0.2);
+        }
+
+        .payment-method input[type="radio"] {
+            margin-right: 15px;
+            width: 20px;
+            height: 20px;
+        }
+
+        .payment-method label[for="upi"] {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .hdfc-options,
+        .cod-options {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .payment-features {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .feature {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            margin: 5px;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .feature i {
+            font-size: 24px;
+            color: #F4631E;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .payment-features {
+                flex-direction: column;
+            }
+
+            .feature {
+                min-width: 100%;
+                margin: 5px 0;
+            }
+        }
+
+        .cod-options h2 {
+            color: #2d3748;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
             text-align: center;
         }
 
+        .cod-options h1 {
+            color: #F4631E;
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border: 2px solid #F4631E;
+        }
+
         .qr-code {
-            margin-bottom: 20px;
+            text-align: center;
+            margin: 20px 0;
         }
 
         .qr-code img {
-            width: 150px;
-            height: 150px;
-            margin-bottom: 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
-        .qr-code p {
-            font-size: 14px;
-            color: #666;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 12px 25px;
-            margin: 10px;
-            background-color: #007BFF;
+        .btn,
+        .btn-submit {
+            background: linear-gradient(135deg, #F4631E, #ff8a50);
             color: white;
             border: none;
+            padding: 15px 30px;
             border-radius: 25px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
+            display: block;
+            width: 100%;
+            margin: 10px 0;
         }
 
-        .btn:hover {
-            background-color: #0056b3;
+        .btn:hover,
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(244, 99, 30, 0.4);
         }
 
-        .btn.btn-submit {
-            background-color: #28a745;
+        #pay-with-upi {
+            background: linear-gradient(135deg, #48bb78, #38a169);
         }
 
-        .btn.btn-submit:hover {
-            background-color: #218838;
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
         }
-
-        @media (max-width: 600px) {
-            .container {
-                width: 90%;
-            }
-
-            .btn {
-                width: 100%;
-                margin: 10px 0;
-            }
-        }
-
-        /* Disabling UPI option styles */
-        .disabled {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
     </style>
-</head>
-<body>
-    <div class="container">
-        <h1 class="page-title">Payment Methods</h1>
-        <p class="page-subtitle">Choose your preferred payment method</p>
 
-        <!-- Form to submit the order -->
-        <form action="{{ route('user.placeOrder') }}" method="POST">
-            @csrf
-            <!-- Hidden fields to pass the selected payment method and total amount -->
-            <input type="hidden" name="payment_method" id="payment_method" value="COD"> <!-- Default is COD -->
-            <input type="hidden" name="total_price" value="{{ number_format($totalAmount ?? 0, 2) }}">
-            <input type="hidden" name="address_id" value="{{ session('selected_address')->id }}">
+    <div class="payment-container">
+        <div class="payment-header">
+            <h1 class="page-title">
+                <i class="fas fa-credit-card"></i>
+                Payment Methods
+            </h1>
+            <p class="page-subtitle">Choose your preferred payment method</p>
+        </div>
 
-            <!-- Payment Method Selection -->
-            <div class="payment-method">
-                <label>
-                    <input type="radio" name="payment" id="upi" class="payment-option" disabled>
-                    UPI (Currently Disabled)
-                </label>
-                <label>
-                    <input type="radio" name="payment" id="cod" class="payment-option" checked>
-                    Cash on Delivery (COD)
-                </label>
-            </div>
+        <div class="payment-content">
+            <h1 class="page-title">Payment Methods</h1>
+            <p class="page-subtitle">Choose your preferred payment method</p>
 
-            <!-- UPI Options (hidden by default) -->
-            <div class="upi-options" id="upi-options">
-                <h2>Pay with UPI</h2>
-                <div class="qr-code">
-                    <img src="https://via.placeholder.com/150" alt="QR Code">
-                    <p>Scan this QR code with your UPI app</p>
+            <!-- Form to submit the order -->
+            <form action="{{ route('user.placeOrder') }}" method="POST">
+                @csrf
+                <!-- Hidden fields to pass the selected payment method and total amount -->
+                <input type="hidden" name="payment_method" id="payment_method" value="hdfc"> <!-- Default is HDFC -->
+                <input type="hidden" name="total_price" value="{{ number_format($totalAmount ?? 0, 2) }}">
+                @if(session('selected_address'))
+                <input type="hidden" name="address_id" value="{{ session('selected_address')->id }}">
+                @endif
+
+                <!-- Payment Method Selection -->
+                <div class="payment-method">
+                    <label>
+                        <input type="radio" name="payment" id="hdfc" class="payment-option" value="hdfc" checked>
+                        <i class="fas fa-university"></i> Pay Online via HDFC
+                    </label>
                 </div>
-                <button type="button" class="btn" id="pay-with-upi">Pay via UPI App</button>
-                <button type="submit" class="btn btn-submit">Submit Payment</button>
-            </div>
 
-            <!-- COD Options -->
-            <div class="cod-options" id="cod-options">
-                <h2>You have selected Cash on Delivery.</h2>
-                <h1>Total Price: <strong>₹{{ number_format($totalAmount ?? 0, 2) }}</strong></h1>
-
-                <button type="submit" class="btn btn-submit">Confirm and Place Order</button>
-            </div>
-        </form>
+                <!-- HDFC Options -->
+                <div class="hdfc-options" id="hdfc-options">
+                    <h2>HDFC Payment Gateway</h2>
+                    <h1>Total Price: <strong>₹{{ number_format($totalAmount ?? 0, 2) }}</strong></h1>
+                    <p>You will be redirected to HDFC secure payment page</p>
+                    <button type="submit" class="btn btn-submit">Pay Now</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
-        // Handle switching between UPI and COD options
-        document.addEventListener('DOMContentLoaded', function () {
-            const upiOption = document.getElementById('upi');
-            const codOption = document.getElementById('cod');
-            const upiOptions = document.getElementById('upi-options');
-            const codOptions = document.getElementById('cod-options');
+        document.addEventListener('DOMContentLoaded', function() {
             const paymentMethodInput = document.getElementById('payment_method');
-
-            // Function to toggle payment method display
-            function togglePaymentMethod() {
-                if (upiOption.checked) {
-                    upiOptions.style.display = 'block';
-                    codOptions.style.display = 'none';
-                    paymentMethodInput.value = 'UPI'; // Set payment method to UPI
-                } else if (codOption.checked) {
-                    upiOptions.style.display = 'none';
-                    codOptions.style.display = 'block';
-                    paymentMethodInput.value = 'COD'; // Set payment method to COD
-                }
-            }
-
-            // Initialize display based on default selection
-            togglePaymentMethod();
-
-            // Add event listeners to radio buttons to handle changes
-            upiOption.addEventListener('change', togglePaymentMethod);
-            codOption.addEventListener('change', togglePaymentMethod);
+            paymentMethodInput.value = 'hdfc';
         });
     </script>
-   
+
     <!-- Footer -->
     @include('user.footer')
 
@@ -219,7 +277,7 @@
     <script>
         function changeMainImage(imageSrc) {
             document.getElementById('main-image').src = imageSrc;
-            
+
             // Update active thumbnail
             document.querySelectorAll('.thumb-item').forEach(item => {
                 item.classList.remove('active');
@@ -231,20 +289,39 @@
         $(document).ready(function() {
             $('.pd-tab-list a').click(function(e) {
                 e.preventDefault();
-                
+
                 // Remove active class from all tabs and content
                 $('.pd-tab-list a').removeClass('active');
                 $('.tab-pane').removeClass('active');
-                
+
                 // Add active class to clicked tab
                 $(this).addClass('active');
-                
+
                 // Show corresponding content
                 var target = $(this).data('target');
                 $(target).addClass('active');
             });
         });
     </script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const paymentMethodInput = document.getElementById('payment_method');
+        
+        document.querySelectorAll('.payment-option').forEach(input => {
+            input.addEventListener('change', function () {
+                paymentMethodInput.value = this.value;
+                console.log('Payment method changed to:', this.value);
+            });
+        });
+        
+        // Set initial value
+        const checkedOption = document.querySelector('.payment-option:checked');
+        if (checkedOption) {
+            paymentMethodInput.value = checkedOption.value;
+        }
+    });
+</script>
 
 </body>
 

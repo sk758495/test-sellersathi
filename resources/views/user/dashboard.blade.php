@@ -50,7 +50,7 @@
             </div>
             <div class="row">
                 @foreach ($gujju_category as $category)
-                    <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                    <div class="col-lg-2 col-md-3 col-sm-4 col-3">
                         <a href="{{ route('user.gujju_category_products', $category->id) }}"
                             style="text-decoration: none;">
                             <div class="category-item">
@@ -64,8 +64,15 @@
                                     @endif
                                 </div>
                                 <div class="ci-text">
-                                    <h5>{{ $category->name }}</h5>
-                                </div>
+    <h5 class="responsive-text"
+        data-xs="{{ Str::words($category->name, 1, '...') }}"
+        data-sm="{{ Str::words($category->name, 2, '...') }}"
+        data-md="{{ Str::words($category->name, 2, '...') }}"
+        data-lg="{{ Str::words($category->name, 2, '...') }}">
+        {{ Str::words($category->name, 2, '...') }}
+    </h5>
+    </div>
+
                             </div>
                         </a>
                     </div>
@@ -139,7 +146,7 @@
                 </div>
                 <div class="col-lg-8 offset-lg-1">
                     <div class="filter-control">
-                        <ul>
+                        <ul id="womens-filters">
                             @forelse($womensSubcategories as $index => $subcategory)
                                 <li class="{{ $index === 0 ? 'active' : '' }}" data-subcategory="{{ $subcategory->id }}" onclick="filterWomensProducts({{ $subcategory->id }})">{{ $subcategory->name }}</li>
                             @empty
@@ -169,7 +176,7 @@
                                 <div class="pi-text">
                                     <div class="catagory-name">{{ $product->brandCategory->name ?? 'Category' }}</div>
                                     <a href="{{ route('user.view_product', $product->id) }}">
-                                        <h5>{{ $product->product_name }}</h5>
+                                        <h5>{{ Str::words($product->product_name, 8, '...') }}</h5>
                                     </a>
                                     <div class="product-price">
                                         ₹ {{ number_format($product->discount_price, 2) }}
@@ -199,7 +206,7 @@
             <div class="row">
                 <div class="col-lg-8">
                     <div class="filter-control">
-                        <ul>
+                        <ul id="mens-filters">
                             @forelse($mensSubcategories as $index => $subcategory)
                                 <li class="{{ $index === 0 ? 'active' : '' }}" data-subcategory="{{ $subcategory->id }}" onclick="filterMensProducts({{ $subcategory->id }})">{{ $subcategory->name }}</li>
                             @empty
@@ -229,7 +236,7 @@
                                 <div class="pi-text">
                                     <div class="catagory-name">{{ $product->brandCategory->name ?? 'Category' }}</div>
                                     <a href="{{ route('user.view_product', $product->id) }}">
-                                        <h5>{{ $product->product_name }}</h5>
+                                        <h5>{{ Str::words($product->product_name, 8, '...') }}</h5>
                                     </a>
                                     <div class="product-price">
                                         ₹ {{ number_format($product->discount_price, 2) }}
@@ -271,7 +278,7 @@
                 </div>
                 <div class="col-lg-8 offset-lg-1">
                     <div class="filter-control">
-                        <ul>
+                        <ul id="electronics-filters">
                             @forelse($electronicsSubcategories as $index => $subcategory)
                                 <li class="{{ $index === 0 ? 'active' : '' }}" data-subcategory="{{ $subcategory->id }}" onclick="filterElectronicsProducts({{ $subcategory->id }})">{{ $subcategory->name }}</li>
                             @empty
@@ -301,7 +308,7 @@
                                 <div class="pi-text">
                                     <div class="catagory-name">{{ $product->brandCategory->name ?? 'Category' }}</div>
                                     <a href="{{ route('user.view_product', $product->id) }}">
-                                        <h5>{{ $product->product_name }}</h5>
+                                        <h5>{{ Str::words($product->product_name, 8, '...') }}</h5>
                                     </a>
                                     <div class="product-price">
                                         ₹ {{ number_format($product->discount_price, 2) }}
@@ -372,6 +379,91 @@
             style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
 
+
+    <script>
+        function filterWomensProducts(subcategoryId) {
+            // Remove active class from all filter buttons
+            document.querySelectorAll('#womens-filters li').forEach(li => li.classList.remove('active'));
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Filter products by subcategory
+            fetch(`/filter-products?gujju_category=womens&subcategory=${subcategoryId}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateProductSlider('womens-products', data.products);
+                });
+        }
+        
+        function filterMensProducts(subcategoryId) {
+            document.querySelectorAll('#mens-filters li').forEach(li => li.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            fetch(`/filter-products?gujju_category=mens&subcategory=${subcategoryId}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateProductSlider('mens-products', data.products);
+                });
+        }
+        
+        function filterElectronicsProducts(subcategoryId) {
+            document.querySelectorAll('#electronics-filters li').forEach(li => li.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            fetch(`/filter-products?gujju_category=electronics&subcategory=${subcategoryId}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateProductSlider('electronics-products', data.products);
+                });
+        }s&subcategory=${subcategoryId}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateProductSlider('electronics-products', data.products);
+                });
+        }
+        
+        function updateProductSlider(sliderId, products) {
+            const slider = document.getElementById(sliderId);
+            slider.innerHTML = '';
+            
+            if(products.length === 0) {
+                slider.innerHTML = '<div class="product-item"><div class="pi-text text-center"><p>No products available</p></div></div>';
+                return;
+            }
+            
+            products.forEach(product => {
+                const productHtml = `
+                    <div class="product-item">
+                        <div class="pi-pic">
+                            <img src="${product.main_image ? '/storage/' + product.main_image : '/assets/img/default-product.jpg'}" alt="${product.product_name}">
+                            ${product.discount_price < product.price ? '<div class="sale">Sale</div>' : ''}
+                            <div class="icon"><i class="icon_heart_alt"></i></div>
+                        </div>
+                        <div class="pi-text">
+                            <div class="catagory-name">${product.brand_category ? product.brand_category.name : 'Category'}</div>
+                            <a href="/view-product/${product.id}"><h5>${product.product_name}</h5></a>
+                            <div class="product-price">
+                                ₹ ${parseFloat(product.discount_price).toFixed(2)}
+                                ${product.discount_price < product.price ? '<span>₹ ' + parseFloat(product.price).toFixed(2) + '</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                slider.innerHTML += productHtml;
+            });
+            
+            // Reinitialize owl carousel
+            $(slider).trigger('destroy.owl.carousel');
+            $(slider).owlCarousel({
+                loop: true,
+                margin: 0,
+                items: 4,
+                dots: false,
+                nav: true,
+                navText: ["<span class='fa fa-angle-left'><span/>", "<span class='fa fa-angle-right'><span/>"]
+            });
+        }
+    </script>
 
     <!-- Bootstrap JS (with Popper) -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
@@ -517,91 +609,34 @@
             }
         });
         
-        // Product filtering functions
-        const womensProductsData = @json($womensProductsBySubcategory);
-        const mensProductsData = @json($mensProductsBySubcategory);
-        const electronicsProductsData = @json($electronicsProductsBySubcategory);
-        
-        function filterWomensProducts(subcategoryId) {
-            // Remove active class from all women's filter items
-            document.querySelectorAll('.women-banner .filter-control li').forEach(li => li.classList.remove('active'));
-            // Add active class to clicked item
-            document.querySelector(`[data-subcategory="${subcategoryId}"]`).classList.add('active');
-            
-            // Update products
-            updateProductSlider('womens-products', womensProductsData[subcategoryId] || []);
-        }
-        
-        function filterMensProducts(subcategoryId) {
-            // Remove active class from all men's filter items
-            document.querySelectorAll('.man-banner .filter-control li').forEach(li => li.classList.remove('active'));
-            // Add active class to clicked item
-            document.querySelector(`[data-subcategory="${subcategoryId}"]`).classList.add('active');
-            
-            // Update products
-            updateProductSlider('mens-products', mensProductsData[subcategoryId] || []);
-        }
-        
-        function filterElectronicsProducts(subcategoryId) {
-            // Remove active class from all electronics filter items
-            document.querySelectorAll('.women-banner:last-of-type .filter-control li').forEach(li => li.classList.remove('active'));
-            // Add active class to clicked item
-            document.querySelector(`[data-subcategory="${subcategoryId}"]`).classList.add('active');
-            
-            // Update products
-            updateProductSlider('electronics-products', electronicsProductsData[subcategoryId] || []);
-        }
-        
-        function updateProductSlider(sliderId, products) {
-            const slider = document.getElementById(sliderId);
-            if (!slider) return;
-            
-            // Destroy existing owl carousel
-            $(slider).trigger('destroy.owl.carousel');
-            
-            // Clear existing content
-            slider.innerHTML = '';
-            
-            if (products.length === 0) {
-                slider.innerHTML = '<div class="product-item"><div class="pi-text text-center"><p>No products available</p></div></div>';
-            } else {
-                products.forEach(product => {
-                    const productHtml = `
-                        <div class="product-item">
-                            <div class="pi-pic">
-                                <img src="${product.main_image ? '/storage/' + product.main_image : '/assets/img/default-product.jpg'}" alt="${product.product_name}">
-                                ${product.discount_price < product.price ? '<div class="sale">Sale</div>' : ''}
-                                <div class="icon"><i class="icon_heart_alt"></i></div>
-                            </div>
-                            <div class="pi-text">
-                                <div class="catagory-name">${product.brand_category?.name || 'Category'}</div>
-                                <a href="/products/product/${product.id}"><h5>${product.product_name}</h5></a>
-                                <div class="product-price">
-                                    ₹ ${parseFloat(product.discount_price).toLocaleString('en-IN', {minimumFractionDigits: 2})}
-                                    ${product.discount_price < product.price ? `<span>₹ ${parseFloat(product.price).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>` : ''}
-                                </div>
-                            </div>
-                        </div>`;
-                    slider.innerHTML += productHtml;
-                });
-            }
-            
-            // Reinitialize owl carousel
-            $(slider).owlCarousel({
-                items: 4,
-                loop: false,
-                autoplay: false,
-                nav: true,
-                dots: false,
-                responsive: {
-                    0: { items: 1 },
-                    576: { items: 2 },
-                    768: { items: 3 },
-                    992: { items: 4 }
-                }
-            });
-        }
+
     </script>
+
+<script>
+    function updateResponsiveText() {
+        const elements = document.querySelectorAll('.responsive-text');
+
+        elements.forEach(el => {
+            const width = window.innerWidth;
+
+            let text = el.dataset.xs; // Default
+
+            if (width >= 1200 && el.dataset.lg) {
+                text = el.dataset.lg;
+            } else if (width >= 992 && el.dataset.md) {
+                text = el.dataset.md;
+            } else if (width >= 576 && el.dataset.sm) {
+                text = el.dataset.sm;
+            }
+
+            el.textContent = text;
+        });
+    }
+
+    // Run on load and resize
+    window.addEventListener('load', updateResponsiveText);
+    window.addEventListener('resize', updateResponsiveText);
+</script>
 
 
 </body>

@@ -20,69 +20,57 @@ class UserController extends Controller
 {
     public function dashboard()
     {
-        // Fetch all active carousel images from the database
         $carouselImages = CarouselImage::where('status', 'active')->get();
-    
-        // Get the Gujju Categories (you don't need to eager load 'images' here)
-        $gujju_category = GujjuCategory::take(12)->get();  // No need to use 'with()'
-    
+        $gujju_category = GujjuCategory::take(12)->get();
         $brands = Brand::latest()->take(6)->get();
-        
-        // Eager load 'images' relationship with brand categories
         $brand_categories = BrandCategory::with('images')->latest()->take(6)->get();
-    
-        // Get brand categories for each section (matching by name)
-        $womensBrandCategories = BrandCategory::where('name', "Women's")->with('subcategories')->get();
-        $mensBrandCategories = BrandCategory::where('name', "Men's")->with('subcategories')->get();
-        $electronicsBrandCategories = BrandCategory::where('name', 'Electronics')->with('subcategories')->get();
         
-        // Get first 4 subcategories for each category
-        $womensSubcategories = $womensBrandCategories->flatMap->subcategories->take(4);
-        $mensSubcategories = $mensBrandCategories->flatMap->subcategories->take(4);
-        $electronicsSubcategories = $electronicsBrandCategories->flatMap->subcategories->take(4);
+        // Get products for each Gujju category
+        $womensProducts = Product::where('gujju_category_id', $gujju_category->where('name', "Women's")->first()->id ?? 0)
+                                ->with(['brandCategory', 'subcategory'])
+                                ->take(8)
+                                ->get();
         
-        // Fetch products grouped by subcategory for filtering
-        $womensProductsBySubcategory = [];
-        foreach($womensSubcategories as $subcategory) {
-            $womensProductsBySubcategory[$subcategory->id] = Product::with('category', 'brand', 'brandCategory', 'subcategory')
-                ->where('subcategory_id', $subcategory->id)->take(8)->get();
-        }
+        $mensProducts = Product::where('gujju_category_id', $gujju_category->where('name', "Men's")->first()->id ?? 0)
+                              ->with(['brandCategory', 'subcategory'])
+                              ->take(8)
+                              ->get();
         
-        $mensProductsBySubcategory = [];
-        foreach($mensSubcategories as $subcategory) {
-            $mensProductsBySubcategory[$subcategory->id] = Product::with('category', 'brand', 'brandCategory', 'subcategory')
-                ->where('subcategory_id', $subcategory->id)->take(8)->get();
-        }
+        $electronicsProducts = Product::where('gujju_category_id', $gujju_category->where('name', 'Electronics')->first()->id ?? 0)
+                                     ->with(['brandCategory', 'subcategory'])
+                                     ->take(8)
+                                     ->get();
         
-        $electronicsProductsBySubcategory = [];
-        foreach($electronicsSubcategories as $subcategory) {
-            $electronicsProductsBySubcategory[$subcategory->id] = Product::with('category', 'brand', 'brandCategory', 'subcategory')
-                ->where('subcategory_id', $subcategory->id)->take(8)->get();
-        }
+        // Get all subcategories that have products in each Gujju category
+        $womensSubcategories = \App\Models\Subcategory::whereHas('products', function($query) use ($gujju_category) {
+            $query->where('gujju_category_id', $gujju_category->where('name', "Women's")->first()->id ?? 0);
+        })->get();
         
-        // Get products for first subcategory only (initial display)
-        $womensProducts = $womensSubcategories->isNotEmpty() ? Product::with('category', 'brand', 'brandCategory', 'subcategory')
-            ->where('subcategory_id', $womensSubcategories->first()->id)->take(8)->get() : collect();
-            
-        $mensProducts = $mensSubcategories->isNotEmpty() ? Product::with('category', 'brand', 'brandCategory', 'subcategory')
-            ->where('subcategory_id', $mensSubcategories->first()->id)->take(8)->get() : collect();
-            
-        $electronicsProducts = $electronicsSubcategories->isNotEmpty() ? Product::with('category', 'brand', 'brandCategory', 'subcategory')
-            ->where('subcategory_id', $electronicsSubcategories->first()->id)->take(8)->get() : collect();
-    
-        return view('user.dashboard', compact('brands', 'brand_categories', 'carouselImages', 'gujju_category', 'mensProducts', 'womensProducts', 'electronicsProducts', 'womensSubcategories', 'mensSubcategories', 'electronicsSubcategories', 'womensProductsBySubcategory', 'mensProductsBySubcategory', 'electronicsProductsBySubcategory'));
+        $mensSubcategories = \App\Models\Subcategory::whereHas('products', function($query) use ($gujju_category) {
+            $query->where('gujju_category_id', $gujju_category->where('name', "Men's")->first()->id ?? 0);
+        })->get();
+        
+        $electronicsSubcategories = \App\Models\Subcategory::whereHas('products', function($query) use ($gujju_category) {
+            $query->where('gujju_category_id', $gujju_category->where('name', 'Electronics')->first()->id ?? 0);
+        })->get();
+        
+        return view('user.dashboard', compact('brands', 'brand_categories', 'carouselImages', 'gujju_category', 'mensProducts', 'womensProducts', 'electronicsProducts', 'womensSubcategories', 'mensSubcategories', 'electronicsSubcategories'));
     }
     
 
     public function all_product_show_here()
     {
         $brands = Brand::take(6)->get();
-         // Eager load 'images' relationship with brand categories
-         $brand_categories = BrandCategory::with('images')->take(6)->get();
-        // Fetch all products with their relationships (brand, category, subcategory)
-        $products = Product::with('brand', 'brandCategory', 'subcategory')->get();
+        $brand_categories = BrandCategory::with('images')->get();
+        
+        // Group products by brand category
+        $productsByCategory = BrandCategory::with(['products' => function($query) {
+            $query->with('brand', 'brandCategory', 'subcategory');
+        }])->get()->filter(function($category) {
+            return $category->products->count() > 0;
+        });
 
-        return view('user.all_product_show_here',compact('products','brands', 'brand_categories'));
+        return view('user.all_product_show_here',compact('productsByCategory','brands', 'brand_categories'));
     }
 
     public function category_page()
@@ -141,18 +129,175 @@ class UserController extends Controller
 
     public function category_products($categoryId)
     {
+        $category = BrandCategory::with('subcategories')->findOrFail($categoryId);
+        
+        // If category has subcategories, show subcategories page
+        if($category->subcategories->count() > 0) {
+            // Load subcategories with their products
+            $subcategoriesWithProducts = $category->subcategories->map(function($subcategory) {
+                $subcategory->products = Product::where('subcategory_id', $subcategory->id)->take(4)->get();
+                return $subcategory;
+            });
+            return view('user.category_subcategories', compact('category', 'subcategoriesWithProducts'));
+        }
+        
+        // If no subcategories, show all products in this category directly
         $brands = Brand::all();
-
         $brand_categories = BrandCategory::all();
-         // Fetch the category by ID
-        $category = BrandCategory::findOrFail($categoryId);
-
-        // Fetch all products under this category
         $products = Product::where('brand_category_id', $categoryId)->get();
-
-        return view('user.category_products',compact('products','brands','brand_categories','category'));
+        
+        return view('user.category_products', compact('products', 'brands', 'brand_categories', 'category'));
     }
 
+    public function subcategory_products($subcategoryId)
+    {
+        $brands = Brand::all();
+        $brand_categories = BrandCategory::all();
+        
+        // Fetch the subcategory by ID
+        $subcategory = \App\Models\Subcategory::findOrFail($subcategoryId);
+        
+        // Fetch all products under this subcategory
+        $products = Product::where('subcategory_id', $subcategoryId)->get();
+        
+        return view('user.subcategory_products', compact('products', 'brands', 'brand_categories', 'subcategory'));
+    }
+
+    public function collection()
+    {
+        // Get categories with their subcategories and sample products
+        $collections = BrandCategory::with(['subcategories' => function($query) {
+            $query->with(['products' => function($q) {
+                $q->take(4);
+            }]);
+        }])->get()->filter(function($category) {
+            return $category->subcategories->filter(function($subcategory) {
+                return $subcategory->products->count() > 0;
+            })->count() > 0;
+        });
+        
+        // Get featured products for showcase
+        $featuredProducts = Product::with('brand', 'brandCategory')->take(8)->get();
+        
+        return view('user.collection', compact('collections', 'featuredProducts'));
+    }
+    
+    public function collection_products($type)
+    {
+        $products = collect();
+        $title = '';
+        
+        switch($type) {
+            case 'electronics':
+                $products = Product::whereHas('brandCategory', function($q) {
+                    $q->where('name', 'like', '%Electronics%');
+                })->get();
+                $title = 'Electronics & Gadgets';
+                break;
+            case 'fashion':
+                $products = Product::whereHas('brandCategory', function($q) {
+                    $q->where('name', 'like', '%Clothing%');
+                })->get();
+                $title = 'Fashion & Lifestyle';
+                break;
+            case 'home-lifestyle':
+                $products = Product::whereHas('brandCategory', function($q) {
+                    $q->where('name', 'like', '%Home%');
+                })->get();
+                $title = 'Home & Lifestyle';
+                break;
+            default:
+                $products = Product::all();
+                $title = 'All Products';
+        }
+        
+        return view('user.collection_products', compact('products', 'title', 'type'));
+    }
+
+    public function filterProducts(Request $request)
+    {
+        $gujjuCategory = $request->get('gujju_category');
+        $subcategoryId = $request->get('subcategory');
+        
+        $gujju_categories = GujjuCategory::all();
+        $categoryId = null;
+        
+        switch($gujjuCategory) {
+            case 'womens':
+                $categoryId = $gujju_categories->where('name', "Women's")->first()->id ?? 0;
+                break;
+            case 'mens':
+                $categoryId = $gujju_categories->where('name', "Men's")->first()->id ?? 0;
+                break;
+            case 'electronics':
+                $categoryId = $gujju_categories->where('name', 'Electronics')->first()->id ?? 0;
+                break;
+        }
+        
+        $products = Product::where('gujju_category_id', $categoryId)
+                          ->where('subcategory_id', $subcategoryId)
+                          ->with(['brandCategory', 'subcategory'])
+                          ->get();
+        
+        return response()->json(['products' => $products]);
+    }
+
+    public function dynamicFilter(Request $request)
+    {
+        $query = Product::with('brand', 'brandCategory', 'subcategory');
+        
+        if ($request->category_id) {
+            $query->where('brand_category_id', $request->category_id);
+        }
+        
+        if ($request->brand_id) {
+            $query->where('brand_id', $request->brand_id);
+        }
+        
+        if ($request->min_price) {
+            $query->where('discount_price', '>=', $request->min_price);
+        }
+        if ($request->max_price) {
+            $query->where('discount_price', '<=', $request->max_price);
+        }
+        
+        if ($request->color) {
+            $query->where('color_name', 'like', '%' . $request->color . '%');
+        }
+        
+        $products = $query->get();
+        
+        $productsByCategory = $products->groupBy('brand_category_id')->map(function($products, $categoryId) {
+            $category = BrandCategory::find($categoryId);
+            return (object) [
+                'id' => $categoryId,
+                'name' => $category ? $category->name : 'Unknown',
+                'products' => $products
+            ];
+        });
+        
+        return response()->json([
+            'success' => true,
+            'productsByCategory' => $productsByCategory,
+            'totalProducts' => $products->count()
+        ]);
+    }
+
+    public function searchSuggestions(Request $request)
+    {
+        $query = $request->get('query');
+        
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+        
+        $products = Product::where('product_name', 'LIKE', '%' . $query . '%')
+                          ->with('brandCategory')
+                          ->take(8)
+                          ->get(['id', 'product_name', 'main_image', 'discount_price', 'brand_category_id']);
+        
+        return response()->json($products);
+    }
 
     public function view_product($id)
     {
@@ -384,10 +529,185 @@ public function removeFromCart(Request $request)
 
 
 // Payment Method
+public function placeOrder(Request $request)
+{
+    // Get address from session (selected in PaymentController)
+    $selectedAddress = session('selected_address');
+    if ($selectedAddress) {
+        session(['order_address_id' => $selectedAddress->id]);
+    } elseif ($request->address_id) {
+        session(['order_address_id' => $request->address_id]);
+    }
+    
+    // If payment method is HDFC, redirect to payment gateway
+    if ($request->payment_method === 'hdfc') {
+        return $this->initiateHdfcPayment($request);
+    }
+    
+    return redirect()->back()->with('error', 'Payment method not supported');
+}
 
+public function initiateHdfcPayment(Request $request)
+{
+    $user = Auth::user();
+    $cartValue = CartValue::where('user_id', $user->id)->first();
+    
+    if (!$cartValue) {
+        return redirect()->back()->with('error', 'Cart not found.');
+    }
+    
+    $orderId = "order_" . $user->id . "_" . time();
+    $customerId = "customer_" . $user->id;
+    
+    // Store order data in session for callback
+    session([
+        'pending_order' => [
+            'payment_method' => 'hdfc',
+            'total_amount' => $cartValue->total_price,
+            'order_id' => $orderId
+        ]
+    ]);
+    
+    $data = [
+        "order_id" => $orderId,
+        "amount" => number_format($cartValue->total_price, 1, '.', ''),
+        "currency" => "INR",
+        "customer_id" => $customerId,
+        "customer_email" => $user->email,
+        "customer_phone" => $user->phone ?? "9876543210",
+        "payment_page_client_id" => "hdfcmaster",
+        "action" => "paymentPage",
+        "return_url" => route('hdfc.user.callback'),
+        "description" => "Complete your payment",
+        "first_name" => $user->name ?? "Customer",
+        "last_name" => ""
+    ];
+    
+    $curl = curl_init();
+    curl_setopt_array($curl, [
+        CURLOPT_URL => 'https://smartgatewayuat.hdfcbank.com/session',
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($data),
+        CURLOPT_HTTPHEADER => [
+            'x-merchantid: SG3589',
+            'x-customerid: ' . $customerId,
+            'Content-Type: application/JSON',
+            'version: 2023-06-30',
+            'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg=='
+        ]
+    ]);
+    
+    $response = curl_exec($curl);
+    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    curl_close($curl);
+    
+    if ($httpCode === 200) {
+        $result = json_decode($response, true);
+        if (isset($result['payment_links']['web'])) {
+            header("Location: " . $result['payment_links']['web']);
+            exit;
+        }
+    }
+    
+    return redirect()->back()->with('error', 'Payment initiation failed: ' . $response);
+}
 
+public function handlePaymentCallback(Request $request)
+{
+    if (isset($_POST["order_id"])) {
+        $params = $_POST;
+    } else if (isset($_GET["order_id"])) {
+        $params = $_GET;
+    } else {
+        return redirect()->route('dashboard')->with('error', 'Invalid payment response.');
+    }
+    
+    $orderId = $params["order_id"];
+    
+    // Get order status using exact API format
+    $curl = curl_init();
+    curl_setopt_array($curl, [
+        CURLOPT_URL => 'https://smartgatewayuat.hdfcbank.com/orders/' . $orderId,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPGET => true,
+        CURLOPT_HTTPHEADER => [
+            'x-merchantid: SG3589',
+            'x-customerid: 325345',
+            'Content-Type: application/x-www-form-urlencoded',
+            'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg=='
+        ]
+    ]);
+    
+    $response = curl_exec($curl);
+    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    curl_close($curl);
+    
+    if ($httpCode === 200) {
+        $order = json_decode($response, true);
+        
+        // If payment successful, create order and clear cart
+        if ($order["status"] === "CHARGED") {
+            // Extract user ID from order ID (format: order_userId_timestamp)
+            $orderParts = explode('_', $orderId);
+            $userId = isset($orderParts[1]) ? $orderParts[1] : null;
+            
+            if ($userId) {
+                $carts = Cart::where('user_id', $userId)->with('product')->get();
+                $addressId = session('order_address_id');
+                
+                // Create orders for each cart item
+                foreach ($carts as $cart) {
+                    \App\Models\Order::create([
+                        'user_id' => $userId,
+                        'product_id' => $cart->product_id,
+                        'quantity' => $cart->quantity,
+                        'total_price' => $cart->product->discount_price * $cart->quantity,
+                        'payment_method' => 'hdfc',
+                        'order_status' => 'Confirmed',
+                        'order_id' => $orderId,
+                        'transaction_id' => $order['transaction_id'] ?? null,
+                        'address_id' => $addressId
+                    ]);
+                }
+                
+                // Clear cart and session after creating orders
+                Cart::where('user_id', $userId)->delete();
+                CartValue::where('user_id', $userId)->delete();
+                session()->forget('order_address_id');
+            }
+            session()->forget('pending_order');
+        }
+        
+        if ($order["status"] === "CHARGED") {
+            return view('user.payment-success', compact('order'));
+        } else {
+            return redirect()->route('dashboard')->with('error', 'Payment failed: ' . ($order['status'] ?? 'Unknown error'));
+        }
+    }
+    
+    return redirect()->route('dashboard')->with('error', 'Payment verification failed: ' . $response);
+}
 
+private function getPaymentStatusMessage($order)
+{
+    $message = "Your order with order_id " . $order["order_id"] . " and amount " . $order["amount"] . " has the following status: ";
+    $status = $order["status"];
 
+    switch ($status) {
+        case "CHARGED":
+            return $message . "order payment done successfully";
+        case "PENDING":
+        case "PENDING_VBV":
+            return $message . "order payment pending";
+        case "AUTHORIZATION_FAILED":
+            return $message . "order payment authorization failed";
+        case "AUTHENTICATION_FAILED":
+            return $message . "order payment authentication failed";
+        default:
+            return $message . "order status " . $status;
+    }
+}
 
 }
 

@@ -126,15 +126,37 @@
 
         <h3>Order Details:</h3>
         <ul>
-            @foreach ($cartItems as $cartItem)  <!-- Loop over cartItems -->
+            @if(is_array($cartItems) || $cartItems instanceof \Illuminate\Support\Collection)
+                @foreach ($cartItems as $cartItem)
+                    @php
+                        // Handle both array and object formats
+                        if (is_array($cartItem)) {
+                            $product = \App\Models\Product::find($cartItem['product_id']);
+                            $quantity = $cartItem['quantity'];
+                        } else {
+                            $product = $cartItem->product;
+                            $quantity = $cartItem->quantity;
+                        }
+                    @endphp
+                    @if($product)
+                        <li>
+                            <strong>Product:</strong> {{ $product->product_name }}<br>
+                            <strong>SKU:</strong> {{ $product->sku }}<br>
+                            <strong>Price:</strong> ₹{{ number_format($product->discount_price, 2) }}<br>
+                            <strong>Quantity:</strong> {{ $quantity }}<br>
+                            <strong>Total:</strong> ₹{{ number_format($product->discount_price * $quantity, 2) }}<br>
+                        </li>
+                    @endif
+                @endforeach
+            @else
                 <li>
-                    <strong>Product:</strong> {{ $cartItem->product->name }}<br>
-                    <strong>SKU:</strong> {{ $cartItem->product->sku }}<br>
-                    <strong>Price:</strong> ₹{{ $cartItem->product->discount_price }}<br>
-                    <strong>Quantity:</strong> {{ $cartItem->quantity }}<br>
-                    <strong>Total:</strong> ₹{{ $cartItem->product->discount_price * $cartItem->quantity }}<br>
+                    <strong>Product:</strong> {{ $order->product->product_name }}<br>
+                    <strong>SKU:</strong> {{ $order->product->sku }}<br>
+                    <strong>Price:</strong> ₹{{ number_format($order->product->discount_price, 2) }}<br>
+                    <strong>Quantity:</strong> {{ $order->quantity }}<br>
+                    <strong>Total:</strong> ₹{{ number_format($order->total_price, 2) }}<br>
                 </li>
-            @endforeach
+            @endif
         </ul>
 
         <hr>

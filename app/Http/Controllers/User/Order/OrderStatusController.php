@@ -15,28 +15,46 @@ class OrderStatusController extends Controller
 {
     public function order_status()
     {
-        // Fetch the orders for the authenticated user
-        $orders = Order::where('user_id', auth()->user()->id)->latest()->get();
-
+        // Fetch the orders for the authenticated user with address and product relationships
+        $orders = Order::with(['address', 'product'])
+                      ->where('user_id', auth()->user()->id)
+                      ->latest()
+                      ->get();
         $brand_categories = BrandCategory::with('images')->take(6)->get();
-
-        // Get the first order (or a specific one if needed)
-        $order = $orders->first();
-
-        // Fetch cart items related to the order
-        $cartItems = Cart::where('user_id', auth()->user()->id)->with('product')->get();
-
-        // Check if the email has already been sent for this order (using the email_sent column)
-        if ($order && !$order->email_sent) {
-            // Send the order details via email (passing both $order and $cartItems)
-            Mail::to(auth()->user()->email)->send(new OrderPlaced($order, $cartItems));
-
-            // Update the email_sent column to true after sending the email
-            $order->email_sent = true;
-            $order->save();
+        
+        // Get HDFC payment status for each order
+        foreach ($orders as $order) {
+            if ($order->payment_method === 'hdfc' && $order->order_id) {
+                $order->hdfc_status = $this->getHdfcOrderStatus($order->order_id);
+            }
         }
 
-        // Return the view with the orders
         return view('user.order.order-status', compact('orders', 'brand_categories'));
+    }
+    
+    private function getHdfcOrderStatus($orderId)
+    {
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => 'https://smartgatewayuat.hdfcbank.com/orders/' . $orderId,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPGET => true,
+            CURLOPT_HTTPHEADER => [
+                'x-merchantid: SG3589',
+                'x-customerid: 325345',
+                'Content-Type: application/x-www-form-urlencoded',
+                'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg=='
+            ]
+        ]);
+        
+        $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+        
+        if ($httpCode === 200) {
+            return json_decode($response, true);
+        }
+        
+        return null;
     }
 }

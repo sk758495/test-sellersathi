@@ -63,6 +63,7 @@ require __DIR__ . '/seller_admin/Seller-user.php';
 require __DIR__ . '/footer-details.php';
 
 require __DIR__ . '/seller_admin/bankdetails.php';
+
 // routes/web.php
 
 
@@ -75,6 +76,20 @@ Route::post('/verify-otp', [OtpVerificationController::class, 'verifyOtp']);
 Route::post('/resend-otp', [OtpController::class, 'resendOtp'])->name('otp.resend');
 
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\SellerUser\CartController;
+use App\Http\Controllers\User\UserController;
+
+// HDFC Payment Routes integrated with cart
+Route::match(['get', 'post'], '/payment/hdfc/callback', [CartController::class, 'handlePaymentCallback'])->name('hdfc.callback');
+Route::match(['get', 'post'], '/payment/hdfc/user/callback', [UserController::class, 'handlePaymentCallback'])->name('hdfc.user.callback');
+Route::post('/user/place-order', [UserController::class, 'placeOrder'])->name('user.placeOrder');
+
+// Payment Controller Routes
+use App\Http\Controllers\PaymentController;
+Route::post('/payment/initiate', [PaymentController::class, 'initiatePayment'])->name('payment.initiate');
+Route::match(['get', 'post'], '/payment/callback', [PaymentController::class, 'handleCallback'])->name('payment.callback');
+Route::post('/payment/refund', [PaymentController::class, 'processRefund'])->name('payment.refund');
+Route::get('/payment/status/{orderId}', [PaymentController::class, 'getOrderStatus'])->name('payment.status');
 
 // Show forgot password form
 Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');

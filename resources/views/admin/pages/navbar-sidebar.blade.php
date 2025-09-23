@@ -3,7 +3,7 @@
     <nav class="navbar navbar-dark sticky-top bg-dark">
         <div class="container-fluid d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
-                <img src="{{ asset('user/images/gujju-logo-removebg.png') }}" id="toggleSidebar" class="admin_image" alt="Admin Image" style="border-radius: 50%; margin-right: 10px; width: 70px">
+                <img src="{{ asset('assets/img/lg.jpg') }}" id="toggleSidebar" class="admin_image" alt="Admin Image" style="border-radius: 50%; margin-right: 10px; width: 70px">
                 <span class="navbar-brand mb-0"></span>
             </div>
             <div class="dropdown">
@@ -21,9 +21,7 @@
                 </ul>
             </div>
         </div>
-
     </nav>
-
 
     <!-- Sidebar -->
     <aside id="sidebar" class="p-3 my-3">

@@ -2,94 +2,177 @@
 <html lang="en">
 
 <head>
+   
     <title>Gujju E Market</title>
+
     @include('user.head')
+    
+</head>
+
+<body>
+
+    @include('user.navbar')
 
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 100%;
+        body { background: #f8f9fa; }
+        .confirmation-card {
             max-width: 600px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .success-header {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            padding: 30px;
             text-align: center;
-        }
-
-        h1 {
-            font-size: 28px;
-            font-weight: 600;
-            margin-bottom: 20px;
-        }
-
-        p {
-            font-size: 18px;
-            color: #555;
-            margin-bottom: 10px;
-        }
-
-        .order-details {
-            margin-top: 20px;
-            text-align: left;
-        }
-
-        .order-details div {
-            margin-bottom: 8px;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 12px 25px;
-            margin-top: 20px;
-            background-color: #007BFF;
             color: white;
+        }
+        .success-icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+        }
+        .success-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        .order-content {
+            padding: 30px;
+        }
+        .order-id {
+            text-align: center;
+            background: #F4631E;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #333;
+        }
+        .whatsapp-section {
+            background: #25d366;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px;
             border: none;
-            border-radius: 25px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s ease;
         }
-
+        .btn-whatsapp {
+            background: #25d366;
+            color: white;
+        }
+        .btn-dashboard {
+            background: #F4631E;
+            color: white;
+        }
         .btn:hover {
-            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            color: white;
+            text-decoration: none;
         }
-
+        @media (max-width: 768px) {
+            .confirmation-card { margin: 20px; }
+            .action-buttons { flex-direction: column; }
+        }
     </style>
-</head>
-<body>
+
     <div class="container">
-        <h1>Order Confirmation</h1>
-
-        <div class="order-details">
-            <div><strong>Order ID:</strong> #{{ $order->id }}</div>
-            <div><strong>Name:</strong> {{ $order->user->name }}</div>
-            <div><strong>Email:</strong> {{ $order->user->email }}</div>
-            <div><strong>Phone:</strong> {{ $order->user->phone }}</div>
-            <div><strong>Status:</strong> {{ $order->order_status }}</div>
-            <div><strong>Product SKU:</strong> {{ $order->product->sku }}</div>
-            <div><strong>Product Name:</strong> {{ $order->product->product_name }}</div>
-            <div><strong>Payment Method:</strong> {{ $order->payment_method }}</div>
-            <div><strong>Total Price:</strong> ₹{{ number_format($order->total_price, 2) }}</div>
-             </div>
-
-        {{-- <p>You will be redirected back to your dashboard shortly...</p> --}}
-
-        
-        <!-- WhatsApp Link -->
-        <p style="color: rgb(255, 106, 0); font-weight:700; text-shadow: 0 0 0.6px black;">To confirm your order, click the button below to send your order details via WhatsApp:</p>
-        <a href="https://wa.me/9328822480?text=Order%20ID%3A%20{{ $order->id }}%0AName%3A%20{{ urlencode($order->user->name) }}%0AEmail%3A%20{{ urlencode($order->user->email) }}%0APhone%3A%20{{ urlencode($order->user->phone) }}%0AStatus%3A%20{{ urlencode($order->order_status) }}%0AProduct%20Name%3A%20{{ urlencode($order->product->product_name) }}%0AProduct%20SKU%3A%20{{ urlencode($order->product->sku) }}%0APayment%20Method%3A%20{{ urlencode($order->payment_method) }}%0ATotal%20Price%3A%20₹{{ number_format($order->total_price, 2) }}" target="_blank">
-            <button class="btn btn-primary">Send Order Conformation via WhatsApp</button>
-        </a>      <br>  
-        <a href="{{ route('dashboard') }}" class="btn">Go to Dashboard</a>
+        <div class="confirmation-card">
+            <div class="success-header">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h1 class="success-title">Order Confirmed!</h1>
+            </div>
+            
+            <div class="order-content">
+                <div class="order-id">
+                    Order #{{ $order->id }}
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Customer</span>
+                    <span class="info-value">{{ $order->user->name }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Product</span>
+                    <span class="info-value">{{ $order->product->product_name }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Status</span>
+                    <span class="info-value">{{ $order->order_status }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Payment</span>
+                    <span class="info-value">{{ $order->payment_method }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Total</span>
+                    <span class="info-value">₹{{ number_format($order->total_price, 2) }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Delivery Address</span>
+                    <span class="info-value">
+                        @if($order->address)
+                            {{ $order->address->address_line1 }}, {{ $order->address->city }}, {{ $order->address->state }} - {{ $order->address->postal_code }}
+                        @else
+                            No address available
+                        @endif
+                    </span>
+                </div>
+                
+                <div class="whatsapp-section">
+                    <i class="fab fa-whatsapp" style="font-size: 24px; margin-bottom: 10px;"></i>
+                    <div>Confirm via WhatsApp for faster processing</div>
+                </div>
+                
+                <div class="action-buttons">
+                    <a href="https://wa.me/9328822480?text=Order%20ID%3A%20{{ $order->id }}%0AName%3A%20{{ urlencode($order->user->name) }}%0AProduct%3A%20{{ urlencode($order->product->product_name) }}%0ATotal%3A%20₹{{ number_format($order->total_price, 2) }}" target="_blank" class="btn btn-whatsapp">
+                        <i class="fab fa-whatsapp"></i> WhatsApp
+                    </a>
+                    <a href="{{ route('dashboard') }}" class="btn btn-dashboard">
+                        <i class="fas fa-home"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>

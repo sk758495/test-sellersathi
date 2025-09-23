@@ -62,7 +62,7 @@
                                     <img src="{{ asset('storage/' . $product->main_image) }}" id="c-product" class="card-img-top img-fluid" alt="Product 1">
                                     <div class="card-body">
                                         <div id="main_products_align">
-                                            <h5 class="card-title">{{ \Illuminate\Support\Str::words($product->product_name, 3, '...') }}</h5>
+                                            <h5 class="card-title">{{ \Illuminate\Support\Str::words($product->product_name, 8, '...') }}</h5>
                                             <p class="card-text">₹{{ $product->discount_price }}</p>
                                         </div>
                                     </div>
@@ -105,41 +105,54 @@
         }
     </script>
 
-
-
-    <h2 class="text-center"> New Arrivals </h2>
-    <div class="container mt-5">
-        <div class="row">
-            @foreach ($products as $product)
-            <div class="col-6 col-sm-6 col-md-4 mb-4">
-                <a href="{{ route('user.view_product', $product->id) }}" style="text-decoration: none;">
-                <div class="card" id="product-card">
-                    <img src="{{ asset('storage/' . $product->main_image) }}" class="card-img-top img-fluid" id="p-deg" alt="Product 1">
-                    <div class="card-body" style="height: 100px;">
-                        <h5 class="card-title">{{ \Illuminate\Support\Str::words($product->product_name, 3, '...') }}</h5>
-                        <button class="btn btn-primary" id="card-button">
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
+    <!-- New Arrivals Section with Improved UI -->
+<h2 class="text-center mb-4">New Arrivals</h2>
+<div class="container mt-5">
+    <div class="row">
+        @foreach ($products as $product)
+            <div class="col-6 col-sm-6 col-md-4 col-lg-4 mb-4">
+                <div class="product-item">
+                    <div class="pi-pic position-relative">
+                        <a href="{{ route('user.view_product', $product->id) }}">
+                            <img src="{{ asset('storage/' . $product->main_image) }}" class="img-fluid" alt="{{ $product->product_name }}">
+                        </a>
+                        @if ($product->discount_price < $product->price)
+                            <div class="sale pp-sale position-absolute top-0 start-0 bg-danger text-white px-2 py-1" style="font-size: 12px;">Sale</div>
+                        @endif
+                        <div class="icon position-absolute top-0 end-0 p-2">
+                            <i class="icon_heart_alt"></i>
+                        </div>
+                    </div>
+                    <div class="pi-text mt-2">
+                        <div class="catagory-name text-muted small">
+                            {{ $product->brandCategory->name ?? 'Category' }}
+                        </div>
+                        <a href="{{ route('user.view_product', $product->id) }}">
+                            <h5 class="fs-6 fw-bold">
+                                {{ \Illuminate\Support\Str::words($product->product_name, 8, '...') }}
+                            </h5>
+                        </a>
+                        <div class="product-price mt-1">
+                            ₹ {{ number_format($product->discount_price, 2) }}
+                            @if ($product->discount_price < $product->price)
+                                <span class="text-decoration-line-through text-muted ms-2">
+                                    ₹ {{ number_format($product->price, 2) }}
+                                </span>
+                            @endif
+                        </div>
                     </div>
                 </div>
+            </div>
+        @endforeach
+
+        <div class="col-12 d-flex justify-content-end align-items-center mt-3">
+            <h5 class="card-title mb-0 me-2">View More...</h5>
+            <a href="{{ route('user.category_page') }}" class="btn btn-primary" id="card-button">
+                <i class="fas fa-arrow-right"></i>
             </a>
-            </div>
-            @endforeach
-
-                <div class="" style="text-align: right; justify-content:right ; display: flex;">
-                    <h5 class="card-title">View More...</h5>
-                    <button class="btn btn-primary" id="card-button">
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                </div>
-
-            </div>
-
-            <!-- Add more cards as needed -->
         </div>
-
     </div>
-
+</div>
 
      <!-- Footer -->
     @include('user.footer')
@@ -155,7 +168,6 @@
     <script src="{{ asset('assets/js/jquery.slicknav.js') }}"></script>
     <script src="{{ asset('assets/js/owl.carousel.min.js') }}"></script>
     <script src="{{ asset('assets/js/main.js') }}"></script>
-
     
 </body>
 

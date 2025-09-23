@@ -13,11 +13,21 @@ Route::get('/all_product-show-here', [UserController::class, 'all_product_show_h
 
 Route::get('/category_page', [UserController::class, 'category_page'])->name('user.category_page');
 
+Route::get('/collection', [UserController::class, 'collection'])->name('user.collection');
+
 Route::get('/gujju_category_products/{id}', [UserController::class, 'gujju_category_products'])->name('user.gujju_category_products');
 
 Route::get('/category_products/{id}', [UserController::class, 'category_products'])->name('user.category_products');
+
+Route::get('/subcategory_products/{id}', [UserController::class, 'subcategory_products'])->name('user.subcategory_products');
+
+Route::get('/collection/{type}', [UserController::class, 'collection_products'])->name('user.collection_products');
 // In routes/web.php
 Route::get('/brand_category/{brandId}', [UserController::class, 'showBrandCategory'])->name('user.brand_category');
+
+Route::get('/filter-products', [UserController::class, 'filterProducts'])->name('user.filter_products');
+Route::post('/dynamic-filter', [UserController::class, 'dynamicFilter'])->name('user.dynamic_filter');
+Route::get('/search-suggestions', [UserController::class, 'searchSuggestions'])->name('user.search_suggestions');
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('dashboard');
 
@@ -45,6 +55,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/place-order', [PaymentController::class, 'placeOrder'])->name('user.placeOrder');
 
     Route::get('/user/orders/{order}', [PaymentController::class, 'showOrderDetails'])->name('user.order.details');
+    Route::get('/hdfc-payment/response', [PaymentController::class, 'handleHdfcResponse'])->name('user.hdfc.response');
+
 });
 
 

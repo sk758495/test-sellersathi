@@ -129,7 +129,7 @@
                         @foreach($products as $product)
                         <tr>
                             <td>{{ $product->id }}</td>
-                            <td>{{ $product->product_name }}</td>
+                            <td>{{ Str::words($product->product_name, 8, '...') }}</td>
                             <td>{{ $product->sku }}</td>
                             <td>{{ $product->discount_price }}</td>
                             <td>{{ $product->brandCategory->name ?? 'N/A' }}</td>

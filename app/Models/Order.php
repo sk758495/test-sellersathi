@@ -15,7 +15,7 @@ class Order extends Model
     const STATUS_CANCELLED = 'Cancelled';
 
     protected $fillable = [
-        'user_id', 'address_id','product_id', 'payment_method', 'order_status', // Add necessary fields
+        'user_id', 'address_id', 'product_id', 'quantity', 'total_price', 'payment_method', 'order_status', 'order_id', 'transaction_id'
     ];
 
     // Add a helper method to check if an order is pending

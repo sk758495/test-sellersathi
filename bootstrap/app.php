@@ -11,7 +11,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        $middleware->validateCsrfTokens(except: [
+            'payment/hdfc/callback',
+            'payment/hdfc/user/callback',
+            'user/place-order',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

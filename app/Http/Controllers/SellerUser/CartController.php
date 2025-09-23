@@ -14,7 +14,6 @@ use App\Models\SellerOrder;
 use App\Models\SellerProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
 use Illuminate\Support\Facades\Mail;
 
 class CartController extends Controller
@@ -323,6 +322,11 @@ public function showPaymentPage($sellerAdminId)
 // Handle the order placement (after selecting the payment method)
 public function placeOrder(Request $request, $sellerAdminId)
 {
+    // If payment method is HDFC, redirect to payment gateway
+    if ($request->payment_method === 'hdfc') {
+        return $this->initiateHdfcPayment($request, $sellerAdminId);
+    }
+    
     $user = Auth::user();  // Get the authenticated user (buyer)
 
     // Fetch the selected address from session
@@ -451,6 +455,185 @@ public function showOrderdetails($orderId, $sellerAdminId)
     return view('seller-user.orders.show-order', compact('order', 'sellerAdminId'));
 }
 
+public function initiateHdfcPayment(Request $request, $sellerAdminId)
+{
+    $user = Auth::user();
+    $cartValue = SellerCartValue::where('user_id', $user->id)
+                                ->where('seller_admin_id', $sellerAdminId)
+                                ->first();
+    
+    if (!$cartValue) {
+        return redirect()->back()->with('error', 'Cart not found.');
+    }
+    
+    $orderId = "order_" . $user->id . "_" . time();
+    $customerId = "customer_" . $user->id;
+    
+    // Store order data in session for callback
+    session([
+        'pending_order' => [
+            'seller_admin_id' => $sellerAdminId,
+            'payment_method' => 'hdfc',
+            'total_amount' => $cartValue->total,
+            'order_id' => $orderId
+        ]
+    ]);
+    
+    $data = [
+        "order_id" => $orderId,
+        "amount" => number_format($cartValue->total, 1, '.', ''),
+        "currency" => "INR",
+        "customer_id" => $customerId,
+        "customer_email" => $user->email,
+        "customer_phone" => $user->phone ?? "9876543210",
+        "payment_page_client_id" => "hdfcmaster",
+        "action" => "paymentPage",
+        "return_url" => route('hdfc.callback'),
+        "description" => "Complete your payment",
+        "first_name" => $user->name ?? "Customer",
+        "last_name" => ""
+    ];
+    
+    $curl = curl_init();
+    curl_setopt_array($curl, [
+        CURLOPT_URL => 'https://smartgatewayuat.hdfcbank.com/session',
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($data),
+        CURLOPT_HTTPHEADER => [
+            'x-merchantid: SG3589',
+            'x-customerid: ' . $customerId,
+            'Content-Type: application/JSON',
+            'version: 2023-06-30',
+            'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg=='
+        ]
+    ]);
+    
+    $response = curl_exec($curl);
+    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    curl_close($curl);
+    
+    if ($httpCode === 200) {
+        $result = json_decode($response, true);
+        if (isset($result['payment_links']['web'])) {
+            header("Location: " . $result['payment_links']['web']);
+            exit;
+        }
+    }
+    
+    // Debug output
+    dd([
+        'http_code' => $httpCode,
+        'response' => $response,
+        'data_sent' => $data,
+        'url' => 'https://smartgatewayuat.hdfcbank.com/session'
+    ]);
+}
 
+public function handlePaymentCallback(Request $request)
+{
+    if (isset($_POST["order_id"])) {
+        $params = $_POST;
+    } else if (isset($_GET["order_id"])) {
+        $params = $_GET;
+    } else {
+        return redirect()->route('home')->with('error', 'Invalid payment response.');
+    }
+    
+    $orderId = $params["order_id"];
+    
+    // Get order status using exact API format
+    $curl = curl_init();
+    curl_setopt_array($curl, [
+        CURLOPT_URL => 'https://smartgatewayuat.hdfcbank.com/orders/' . $orderId,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPGET => true,
+        CURLOPT_HTTPHEADER => [
+            'x-merchantid: SG3589',
+            'x-customerid: 325345',
+            'Content-Type: application/x-www-form-urlencoded',
+            'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg=='
+        ]
+    ]);
+    
+    $response = curl_exec($curl);
+    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    curl_close($curl);
+    
+    if ($httpCode === 200) {
+        $order = json_decode($response, true);
+        
+        // If payment successful, create the order
+        if ($order["status"] === "CHARGED") {
+            $pendingOrder = session('pending_order');
+            if ($pendingOrder) {
+                $this->createOrderAfterPayment($pendingOrder, $orderId);
+                session()->forget('pending_order');
+            }
+        }
+        
+        $message = $this->getPaymentStatusMessage($order);
+        return view('payment.callback', compact('message', 'params', 'order'));
+    }
+    
+    return redirect()->route('home')->with('error', 'Payment verification failed: ' . $response);
+}
+
+private function createOrderAfterPayment($pendingOrder, $paymentOrderId)
+{
+    $user = Auth::user();
+    $sellerAdminId = $pendingOrder['seller_admin_id'];
+    
+    $address = session('selected_address');
+    $cartItems = SellerCart::where('user_id', $user->id)
+                           ->where('seller_admin_id', $sellerAdminId)
+                           ->with('product')
+                           ->get();
+    
+    $lastCartItem = $cartItems->last();
+    
+    $order = new SellerOrder();
+    $order->user_id = $user->id;
+    $order->seller_admin_id = $sellerAdminId;
+    $order->address_id = $address->id;
+    $order->product_id = $lastCartItem->product_id;
+    $order->payment_method = 'hdfc';
+    $order->quantity = $lastCartItem->quantity;
+    $order->total_price = $pendingOrder['total_amount'];
+    $order->status = 'paid';
+    $order->payment_order_id = $paymentOrderId;
+    $order->email_sent = false;
+    $order->save();
+    
+    // Send emails
+    Mail::to($user->email)->send(new SellerUserOrderPlaced($order, $user, SellerAdmin::find($sellerAdminId)));
+    Mail::to('arjuncableconverters@gmail.com')->send(new AdminNewOrderNotification($order, SellerAdmin::find($sellerAdminId)));
+    
+    // Clear cart
+    SellerCart::where('user_id', $user->id)->where('seller_admin_id', $sellerAdminId)->delete();
+    SellerCartValue::where('user_id', $user->id)->where('seller_admin_id', $sellerAdminId)->delete();
+    
+    return $order;
+}
+
+private function getPaymentStatusMessage($order)
+{
+    $message = "Your order with order_id " . $order["order_id"] . " and amount " . $order["amount"] . " has the following status: ";
+    $status = $order["status"];
+
+    switch ($status) {
+        case "CHARGED":
+            return $message . "order payment done successfully";
+        case "PENDING":
+        case "PENDING_VBV":
+            return $message . "order payment pending";
+        case "AUTHORIZATION_FAILED":
+            return $message . "order payment authorization failed";
+        case "AUTHENTICATION_FAILED":
+            return $message . "order payment authentication failed";
+        default:
+            return $message . "order status " . $status;
+    }
+}
 
 }

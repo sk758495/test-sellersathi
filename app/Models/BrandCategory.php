@@ -22,4 +22,9 @@ class BrandCategory extends Model
     {
         return $this->hasMany(BrandCategoryImage::class);
     }
+
+    public function products()
+    {
+        return $this->hasMany(Product::class, 'brand_category_id');
+    }
 }

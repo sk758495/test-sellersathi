@@ -37,7 +37,7 @@
                                     <div class="card-body">
                                         <div id="main_products_align">
                                             <!-- Product Name -->
-                                            <h5 class="card-title">{{ \Illuminate\Support\Str::words($discount->product->product_name, 3, '...') }}</h5>
+                                            <h5 class="card-title">{{ \Illuminate\Support\Str::words($discount->product->product_name, 8, '...') }}</h5>
 
                                             <!-- Original Discount Price (Strikethrough) -->
                                             <p class="card-text text-muted" style="text-decoration: line-through;">
