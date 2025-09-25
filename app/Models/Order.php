@@ -17,6 +17,14 @@ class Order extends Model
     protected $fillable = [
         'user_id', 'address_id', 'product_id', 'quantity', 'total_price', 'payment_method', 'order_status', 'order_id', 'transaction_id'
     ];
+    
+    protected $casts = [
+        'address_id' => 'integer',
+        'user_id' => 'integer',
+        'product_id' => 'integer',
+        'quantity' => 'integer',
+        'total_price' => 'decimal:2'
+    ];
 
     // Add a helper method to check if an order is pending
     public function isPending()

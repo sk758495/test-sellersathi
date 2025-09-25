@@ -15,9 +15,18 @@ Route::get('/debug-orders', function() {
                   ->take(5)
                   ->get();
     
-    $debug = [];
+    $debug = [
+        'session_data' => [
+            'selected_address_id' => session('selected_address_id'),
+            'payment_address_id' => session('payment_address_id'),
+            'hdfc_txn_ref' => session('hdfc_txn_ref'),
+            'payment_user_id' => session('payment_user_id')
+        ],
+        'orders' => []
+    ];
+    
     foreach ($orders as $order) {
-        $debug[] = [
+        $debug['orders'][] = [
             'id' => $order->id,
             'order_id' => $order->order_id,
             'transaction_id' => $order->transaction_id,

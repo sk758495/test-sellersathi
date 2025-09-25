@@ -82,9 +82,21 @@ class PaymentController extends Controller
 public function selectAddress(Request $request)
 {
     $address = Address::findOrFail($request->address_id);
+    
+    // Verify the address belongs to the current user
+    if ($address->user_id !== auth()->id()) {
+        return redirect()->route('user.payment')->with('error', 'Invalid address selection.');
+    }
 
-    // Store the selected address in the session for later use
-    session(['selected_address' => $address]);
+    // Clear any existing payment session data and store the selected address
+    session()->forget(['payment_address_id', 'payment_address_data', 'hdfc_txn_ref']);
+    session(['selected_address_id' => $address->id]);
+    
+    Log::info('Address selected for user:', [
+        'user_id' => auth()->id(),
+        'address_id' => $address->id,
+        'address_data' => $address->toArray()
+    ]);
 
     // Redirect to the payment page
     return redirect()->route('user.payment.payment_page')->with('success', 'Address selected successfully 😎!');
@@ -118,11 +130,13 @@ public function payment_page()
     }
         
         $user = Auth::user();
-        $address = session('selected_address');
+        $addressId = session('selected_address_id');
         
-        if (!$address) {
+        if (!$addressId) {
             return redirect()->route('user.payment')->with('error', 'No address selected 😒😒.');
         }
+        
+        $address = Address::findOrFail($addressId);
         
         // Log address information for debugging
         Log::info('Order placement - Address info:', [
@@ -153,18 +167,42 @@ public function payment_page()
             $totalPrice = $price * $cartItem->quantity;
             $totalPriceWithShipping = $totalPrice + $shippingCharge;
 
-            $order = Order::create([
+            // Ensure address exists
+            if (!$address || !$address->id) {
+                Log::error('Address validation failed for COD order', [
+                    'address' => $address ? $address->toArray() : null,
+                    'address_id' => $addressId,
+                    'user_id' => $user->id
+                ]);
+                throw new \Exception('Address not found - cannot create order');
+            }
+            
+            // Validate address_id before creating order
+            if (!$address->id || $address->id <= 0) {
+                throw new \Exception('Invalid address ID: ' . $address->id);
+            }
+            
+            $orderData = [
                 'user_id' => $user->id,
-                'address_id' => $address->id,
+                'address_id' => (int)$address->id,
                 'product_id' => $product->id,
                 'payment_method' => $request->payment_method,
                 'quantity' => $cartItem->quantity,
                 'total_price' => $totalPriceWithShipping,
                 'order_status' => 'Pending',
                 'order_id' => 'COD' . time() . rand(1000, 9999)
-            ]);
+            ];
+            
+            Log::info('Creating COD order with data:', $orderData);
+            $order = Order::create($orderData);
 
             $orderIds[] = $order->id;
+            
+            Log::info('COD Order created successfully:', [
+                'order_id' => $order->id,
+                'address_id' => $address->id,
+                'user_id' => $user->id
+            ]);
         }
 
         // Send confirmation emails
@@ -176,7 +214,7 @@ public function payment_page()
         // Clear cart, cart value, and session data
         Cart::where('user_id', $user->id)->delete();
         CartValue::where('user_id', $user->id)->delete();
-        session()->forget('selected_address');
+        session()->forget('selected_address_id');
         
         return redirect()->route('user.order.details', ['order' => end($orderIds)])
                         ->with('success', '🥳🥳 Your order has been Received successfully 🥳🥳!');
@@ -186,16 +224,18 @@ public function payment_page()
 private function initiateHdfcPayment(Request $request)
 {
     $user = Auth::user();
-    $address = session('selected_address');
+    $addressId = session('selected_address_id');
     $cartValue = CartValue::where('user_id', $user->id)->first();
 
     if (!$cartValue) {
         return redirect()->route('user.cart')->with('error', 'Cart value not found.');
     }
     
-    if (!$address) {
+    if (!$addressId) {
         return redirect()->route('user.payment')->with('error', 'No address selected.');
     }
+    
+    $address = Address::findOrFail($addressId);
 
     // Generate secure order ID
     $orderId = 'ORD' . strtoupper(bin2hex(random_bytes(8)));
@@ -234,18 +274,20 @@ private function initiateHdfcPayment(Request $request)
             $res = $response->json();
 
             if (isset($res['paymentUrl'])) {
-                // Store payment details in session
+                // Store payment details in session with address data as backup
                 session([
                     'hdfc_txn_ref' => $orderId,
                     'payment_amount' => $amount,
                     'payment_user_id' => $user->id,
-                    'payment_address_id' => $address->id
+                    'payment_address_id' => $address->id,
+                    'payment_address_data' => $address->toArray() // Store full address as backup
                 ]);
                 
                 Log::info('Payment session stored:', [
                     'hdfc_txn_ref' => $orderId,
                     'payment_user_id' => $user->id,
-                    'payment_address_id' => $address->id
+                    'payment_address_id' => $address->id,
+                    'address_data' => $address->toArray()
                 ]);
 
                 return redirect($res['paymentUrl']);
@@ -279,30 +321,54 @@ public function handleHdfcResponse(Request $request)
 
     if ($status === 'success') {
         try {
-            // Get payment details from session
-            $userId = session('payment_user_id');
-            $addressId = session('payment_address_id');
+            // Get payment details from session with multiple fallbacks
+            $userId = session('payment_user_id') ?? auth()->id();
+            $addressId = session('payment_address_id') ?? session('selected_address_id');
+            $addressData = session('payment_address_data');
             
-            // Also try to get address from selected_address session if payment_address_id is null
-            if (!$addressId) {
-                $selectedAddress = session('selected_address');
-                $addressId = $selectedAddress ? $selectedAddress->id : null;
-            }
-            
+            // Log all session data for debugging
             Log::info('HDFC Payment success - Session data:', [
                 'user_id' => $userId,
                 'address_id' => $addressId,
+                'address_data' => $addressData,
                 'txn_ref' => $txnRef,
                 'transaction_id' => $transactionId
             ]);
             
-            if (!$userId || !$addressId) {
-                Log::error('Missing user or address data', ['user_id' => $userId, 'address_id' => $addressId]);
+            if (!$userId) {
+                Log::error('Missing user ID');
                 return redirect()->route('user.cart')->with('error', 'Session expired. Please try again.');
             }
             
             $user = User::findOrFail($userId);
-            $address = Address::findOrFail($addressId);
+            $address = null;
+            
+            // Try to get address with multiple fallbacks
+            if ($addressId) {
+                $address = Address::find($addressId);
+            }
+            
+            // If address not found and we have address data, create a new address
+            if (!$address && $addressData) {
+                Log::info('Creating new address from stored data');
+                $address = Address::create([
+                    'user_id' => $userId,
+                    'address_line1' => $addressData['address_line1'],
+                    'address_line2' => $addressData['address_line2'] ?? null,
+                    'city' => $addressData['city'],
+                    'state' => $addressData['state'],
+                    'country' => $addressData['country'],
+                    'postal_code' => $addressData['postal_code']
+                ]);
+                $addressId = $address->id;
+            }
+            
+            if (!$address) {
+                Log::error('No address found or created', ['address_id' => $addressId]);
+                return redirect()->route('user.cart')->with('error', 'Address not found. Please select address again.');
+            }
+            
+            Log::info('Using address:', ['address' => $address->toArray()]);
             $cartItems = Cart::where('user_id', $userId)->with('product', 'product.discount')->get();
             
             if ($cartItems->isEmpty()) {
@@ -324,10 +390,15 @@ public function handleHdfcResponse(Request $request)
 
                 $totalPrice = $price * $cartItem->quantity;
                 $totalPriceWithShipping = $totalPrice + $shippingCharge;
-
-                $order = Order::create([
+                
+                // Validate address_id before creating order
+                if (!$address->id || $address->id <= 0) {
+                    throw new \Exception('Invalid address ID: ' . $address->id);
+                }
+                
+                $orderData = [
                     'user_id' => $userId,
-                    'address_id' => $addressId,
+                    'address_id' => (int)$address->id,
                     'product_id' => $product->id,
                     'payment_method' => 'HDFC',
                     'quantity' => $cartItem->quantity,
@@ -335,14 +406,17 @@ public function handleHdfcResponse(Request $request)
                     'order_status' => 'Confirmed',
                     'order_id' => $txnRef,
                     'transaction_id' => $transactionId
-                ]);
+                ];
+                
+                Log::info('Creating HDFC order with data:', $orderData);
+                $order = Order::create($orderData);
 
                 $orderIds[] = $order->id;
                 
                 Log::info('Order created successfully:', [
                     'order_id' => $order->id,
                     'transaction_id' => $transactionId,
-                    'address_id' => $addressId
+                    'address_id' => $address->id
                 ]);
             }
 
@@ -355,7 +429,7 @@ public function handleHdfcResponse(Request $request)
             // Clear cart and session
             Cart::where('user_id', $userId)->delete();
             CartValue::where('user_id', $userId)->delete();
-            session()->forget(['hdfc_txn_ref', 'payment_amount', 'payment_user_id', 'payment_address_id', 'selected_address']);
+            session()->forget(['hdfc_txn_ref', 'payment_amount', 'payment_user_id', 'payment_address_id', 'payment_address_data', 'selected_address_id']);
 
             return redirect()->route('user.order.details', ['order' => end($orderIds)])
                             ->with('success', '🎉 Payment successful! Your order has been confirmed.');

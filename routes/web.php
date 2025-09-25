@@ -66,6 +66,8 @@ require __DIR__ . '/seller_admin/bankdetails.php';
 
 // Debug route (remove in production)
 require __DIR__ . '/debug.php';
+require __DIR__ . '/test-address.php';
+require __DIR__ . '/debug-address.php';
 
 // routes/web.php
 

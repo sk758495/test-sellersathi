@@ -93,7 +93,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-lg-6">
+                    {{-- <div class="col-lg-6">
                         <div class="place-order">
                             <h4>Your Order</h4>
                             <div class="order-total">
@@ -132,7 +132,7 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> --}}
                 </div>
             </form>
         </div>
