@@ -26,7 +26,7 @@
             <form action="{{ route('user.save_address') }}" method="POST" class="checkout-form">
                 @csrf
                 <div class="row">
-                    <div class="col-lg-6">
+                    <div class="col-lg-12">
                         @if (!$addresses->isEmpty())
                         <div class="checkout-content">
                             <a href="#" class="content-btn" id="saved-addresses-btn">
