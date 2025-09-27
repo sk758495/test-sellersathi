@@ -20,7 +20,7 @@ class OrderController extends Controller
         $orders = Order::with(['user', 'product.category', 'product.brandCategory'])
             ->selectRaw('orders.*, (SELECT COUNT(*) FROM orders o2 WHERE o2.order_id = orders.order_id) as transaction_count')
             ->whereIn('id', function($query) {
-                $query->select('id')
+                $query->selectRaw('MAX(id)')
                       ->from('orders')
                       ->groupBy('order_id');
             })
