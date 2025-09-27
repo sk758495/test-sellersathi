@@ -94,6 +94,26 @@
     .delete-icon:hover {
         color: #850016; /* Optional: Darker color on hover */
     }
+    
+    .table th {
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+    
+    .table td {
+        font-size: 0.85rem;
+        vertical-align: middle;
+    }
+    
+    .badge {
+        font-size: 0.75rem;
+    }
+    
+    @media (max-width: 1200px) {
+        .table-responsive {
+            font-size: 0.8rem;
+        }
+    }
     </style>
 </head>
 
@@ -106,43 +126,56 @@
     <!-- Body Part -->
         <main class="flex-grow-1 p-3" id="main-content">
 
-        <h1 class="mb-">Manage Orders</h1>
+        <h1 class="mb-4">Manage Orders</h1>
+        <div class="alert alert-info">
+            <strong>Order Details:</strong> Shows unique orders with transaction count, product details, and current status.
+        </div>
 
+        <div class="table-responsive">
         <table class="table table-bordered table-striped">
             <thead class="table-dark">
                 <tr>
                     <th>Order ID</th>
+                    <th>Transaction Status</th>
+                    <th>Transaction Amount</th>
+                    <th>Transaction Count</th>
                     <th>Product Name</th>
-                    <th>Total Quantity</th>
+                    <th>Product Type</th>
                     <th>User Name</th>
                     <th>User Mobile</th>
-                    <th>Status</th>
                     <th>Payment Method</th>
-                    <th>Total Price</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($orders as $order)
                     <tr>
-                        <td>{{ $order->id }}</td>
-                        <td>{{ $order->product->product_name }}</td>
-                        <td>{{ $order->quantity }}</td>
+                        <td><strong>{{ $order->order_id ?? 'N/A' }}</strong></td>
+                        <td>
+                            <span class="badge 
+                                @if($order->order_status == 'Pending') bg-warning
+                                @elseif($order->order_status == 'Confirmed') bg-success
+                                @else bg-danger
+                                @endif">
+                                {{ $order->order_status }}
+                            </span>
+                        </td>
+                        <td><strong>₹{{ number_format($order->total_price, 2) }}</strong></td>
+                        <td><span class="badge bg-info">{{ $order->transaction_count }}</span></td>
+                        <td>{{ $order->product->product_name ?? 'N/A' }}</td>
+                        <td>{{ $order->product->category->name ?? $order->product->brandCategory->name ?? 'N/A' }}</td>
                         <td>{{ $order->user ? $order->user->name : 'No user found' }}</td>
                         <td>{{ $order->user ? $order->user->phone : 'No user found' }}</td>
-                        <td>{{ $order->order_status }}</td>
                         <td>{{ $order->payment_method }}</td>
-                        <td>₹{{ number_format($order->total_price, 2) }}</td>
                         <td>
                             @if ($order->order_status == 'Pending')
                                 <form action="{{ route('admin.order.confirm', $order->id) }}" method="POST" style="display: inline;">
                                     @csrf
-                                    <button type="submit" class="btn btn-success btn-sm">Confirm Order</button>
+                                    <button type="submit" class="btn btn-success btn-sm">Confirm</button>
                                 </form>
-
                                 <form action="{{ route('admin.order.cancel', $order->id) }}" method="POST" style="display: inline;">
                                     @csrf
-                                    <button type="submit" class="btn btn-danger btn-sm">Cancel Order</button>
+                                    <button type="submit" class="btn btn-danger btn-sm">Cancel</button>
                                 </form>
                             @else
                                 <button class="btn btn-secondary btn-sm" disabled>{{ $order->order_status }}</button>
@@ -152,6 +185,7 @@
                 @endforeach
             </tbody>
         </table>
+        </div>
 
        
     </div>

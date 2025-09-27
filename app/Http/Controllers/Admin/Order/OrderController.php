@@ -16,8 +16,12 @@ class OrderController extends Controller
     // Method to view all orders
     public function viewOrders()
     {
-        // Get all orders, sorted by created_at in descending order (most recent first)
-        $orders = Order::latest()->get();
+        // Get all orders with relationships and count duplicates by order_id
+        $orders = Order::with(['user', 'product.category', 'product.brandCategory'])
+            ->selectRaw('*, COUNT(*) as transaction_count')
+            ->groupBy('order_id')
+            ->latest()
+            ->get();
 
         // Pass orders to the view
         return view('admin.orders.order', compact('orders'));
