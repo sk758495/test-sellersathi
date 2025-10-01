@@ -113,6 +113,22 @@
         .table-responsive {
             font-size: 0.8rem;
         }
+        .table th:nth-child(10),
+        .table th:nth-child(11),
+        .table td:nth-child(10),
+        .table td:nth-child(11) {
+            min-width: 120px;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .table th:nth-child(10),
+        .table th:nth-child(11),
+        .table td:nth-child(10),
+        .table td:nth-child(11) {
+            font-size: 0.7rem;
+            min-width: 100px;
+        }
     }
     </style>
 </head>
@@ -144,6 +160,8 @@
                     <th>User Name</th>
                     <th>User Mobile</th>
                     <th>Payment Method</th>
+                    <th>Order Date</th>
+                    <th>Last Updated</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -167,6 +185,8 @@
                         <td>{{ $order->user ? $order->user->name : 'No user found' }}</td>
                         <td>{{ $order->user ? $order->user->phone : 'No user found' }}</td>
                         <td>{{ $order->payment_method }}</td>
+                        <td><small>{{ $order->created_at->format('d M Y, h:i A') }}</small></td>
+                        <td><small>{{ $order->updated_at->format('d M Y, h:i A') }}</small></td>
                         <td>
                             @if ($order->order_status == 'Pending')
                                 <form action="{{ route('admin.order.confirm', $order->id) }}" method="POST" style="display: inline;">
