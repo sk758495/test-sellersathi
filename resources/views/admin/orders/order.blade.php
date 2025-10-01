@@ -144,7 +144,7 @@
 
         <h1 class="mb-4">Manage Orders</h1>
         <div class="alert alert-info">
-            <strong>Order Details:</strong> Shows unique orders with transaction count, product details, and current status.
+            <strong>Order Details:</strong> Shows unique orders with payment attempts count, product details, and current status.
         </div>
 
         <div class="table-responsive">
@@ -154,7 +154,7 @@
                     <th>Order ID</th>
                     <th>Transaction Status</th>
                     <th>Transaction Amount</th>
-                    <th>Transaction Count</th>
+                    <th>Payment Attempts</th>
                     <th>Product Name</th>
                     <th>Product Type</th>
                     <th>User Name</th>

@@ -16,9 +16,9 @@ class OrderController extends Controller
     // Method to view all orders
     public function viewOrders()
     {
-        // Get unique orders with transaction counts
+        // Get unique orders with payment transaction counts
         $orders = Order::with(['user', 'product.category', 'product.brandCategory'])
-            ->selectRaw('orders.*, (SELECT COUNT(*) FROM orders o2 WHERE o2.order_id = orders.order_id) as transaction_count')
+            ->selectRaw('orders.*, (SELECT COUNT(DISTINCT o2.transaction_id) FROM orders o2 WHERE o2.order_id = orders.order_id AND o2.transaction_id IS NOT NULL) as transaction_count')
             ->whereIn('id', function($query) {
                 $query->selectRaw('MAX(id)')
                       ->from('orders')
