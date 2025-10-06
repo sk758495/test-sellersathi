@@ -155,13 +155,13 @@
                     <th>Transaction Status</th>
                     <th>Transaction Amount</th>
                     <th>Payment Attempts</th>
-                    <th>Product Name</th>
-                    <th>Product Type</th>
+                    <th>Items Count</th>
+                    <th>Products</th>
                     <th>User Name</th>
                     <th>User Mobile</th>
                     <th>Payment Method</th>
+                    <th>Transaction ID</th>
                     <th>Order Date</th>
-                    <th>Last Updated</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -179,23 +179,40 @@
                             </span>
                         </td>
                         <td><strong>₹{{ number_format($order->total_price, 2) }}</strong></td>
-                        <td><span class="badge bg-info">{{ $order->transaction_count }}</span></td>
-                        <td>{{ $order->product->product_name ?? 'N/A' }}</td>
-                        <td>{{ $order->product->category->name ?? $order->product->brandCategory->name ?? 'N/A' }}</td>
+                        <td><span class="badge bg-info">{{ $order->transaction_count ?? 1 }}</span></td>
+                        <td><span class="badge bg-info">{{ $order->orderItems ? $order->orderItems->count() : 0 }}</span></td>
+                        <td>
+                            @if($order->orderItems && $order->orderItems->count() > 0)
+                                @foreach($order->orderItems->take(2) as $item)
+                                    <div class="mb-1">
+                                        <small><strong>{{ $item->product ? $item->product->product_name : 'Product N/A' }}</strong></small>
+                                        <br><small class="text-muted">Qty: {{ $item->quantity }} | ₹{{ number_format($item->price, 2) }}</small>
+                                    </div>
+                                @endforeach
+                                @if($order->orderItems->count() > 2)
+                                    <small class="text-info">+{{ $order->orderItems->count() - 2 }} more items</small>
+                                @endif
+                            @else
+                                <small class="text-muted">No items found</small>
+                            @endif
+                        </td>
                         <td>{{ $order->user ? $order->user->name : 'No user found' }}</td>
                         <td>{{ $order->user ? $order->user->phone : 'No user found' }}</td>
                         <td>{{ $order->payment_method }}</td>
+                        <td>{{ $order->transaction_id ?? $order->order_id ?? 'N/A' }}</td>
                         <td><small>{{ $order->created_at->format('d M Y, h:i A') }}</small></td>
-                        <td><small>{{ $order->updated_at->format('d M Y, h:i A') }}</small></td>
                         <td>
+                            <button class="btn btn-info btn-sm mb-1" onclick="viewOrderDetails({{ $order->id }})">
+                                <i class="fas fa-eye"></i> View
+                            </button>
                             @if ($order->order_status == 'Pending')
                                 <form action="{{ route('admin.order.confirm', $order->id) }}" method="POST" style="display: inline;">
                                     @csrf
-                                    <button type="submit" class="btn btn-success btn-sm">Confirm</button>
+                                    <button type="submit" class="btn btn-success btn-sm mb-1">Confirm</button>
                                 </form>
                                 <form action="{{ route('admin.order.cancel', $order->id) }}" method="POST" style="display: inline;">
                                     @csrf
-                                    <button type="submit" class="btn btn-danger btn-sm">Cancel</button>
+                                    <button type="submit" class="btn btn-danger btn-sm mb-1">Cancel</button>
                                 </form>
                             @else
                                 <button class="btn btn-secondary btn-sm" disabled>{{ $order->order_status }}</button>
@@ -218,10 +235,50 @@
 
 
 
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-labelledby="orderDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="orderDetailsModalLabel">Order Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="orderDetailsContent">
+                <!-- Order details will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- js file attached here -->
 <script src="{{ asset('admin/js/admin.js') }}"></script>
+
+<script>
+function viewOrderDetails(orderId) {
+    // Show loading
+    document.getElementById('orderDetailsContent').innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+    modal.show();
+    
+    // Fetch order details
+    fetch(`/admin/order/${orderId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('orderDetailsContent').innerHTML = data.html;
+            } else {
+                document.getElementById('orderDetailsContent').innerHTML = '<div class="alert alert-danger">Failed to load order details</div>';
+            }
+        })
+        .catch(error => {
+            document.getElementById('orderDetailsContent').innerHTML = '<div class="alert alert-danger">Error loading order details</div>';
+        });
+}
+</script>
 
 <!-- JavaScript to show custom pop-up -->
 <script>

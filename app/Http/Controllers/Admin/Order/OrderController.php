@@ -17,8 +17,8 @@ class OrderController extends Controller
     public function viewOrders()
     {
         // Get unique orders with payment attempts count
-        $orders = Order::with(['user', 'product.category', 'product.brandCategory'])
-            ->selectRaw('orders.*, 1 as transaction_count')
+        $orders = Order::with(['user', 'orderItems.product', 'address'])
+            ->selectRaw('orders.*, COUNT(CASE WHEN orders.order_id IS NOT NULL THEN 1 END) OVER (PARTITION BY orders.order_id) as transaction_count')
             ->whereIn('id', function($query) {
                 $query->selectRaw('MAX(id)')
                       ->from('orders')
@@ -57,6 +57,19 @@ class OrderController extends Controller
 
         // Redirect back with success message
         return redirect()->route('admin.orders')->with('error', 'Order cancelled successfully!');
+    }
+
+    // Method to get order details for modal
+    public function getOrderDetails(Order $order)
+    {
+        $order->load(['user', 'orderItems.product', 'address']);
+        
+        $html = view('admin.orders.order-details-modal', compact('order'))->render();
+        
+        return response()->json([
+            'success' => true,
+            'html' => $html
+        ]);
     }
 
 

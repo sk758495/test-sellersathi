@@ -16,11 +16,16 @@ class OrderCancelled extends Mailable
     public function __construct(Order $order)
     {
         $this->order = $order;
+        
+        // Load order items if not already loaded
+        if (!$this->order->relationLoaded('orderItems')) {
+            $this->order->load('orderItems.product');
+        }
     }
 
     public function build()
     {
-        return $this->subject('Your Order Has Been Cancelled')
+        return $this->subject('Your Order Has Been Cancelled - Order #' . ($this->order->order_number ?? $this->order->id))
                     ->view('emails.order_cancelled'); // Using the custom view
     }
 }

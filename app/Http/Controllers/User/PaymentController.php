@@ -155,8 +155,7 @@ public function payment_page()
             $order = $this->createOrderFromCart($user->id, $request->payment_method, 'Pending', 'COD' . time() . rand(1000, 9999));
             
             // Send confirmation email
-            $cartItems = Cart::where('user_id', $user->id)->with('product')->get();
-            Mail::to($user->email)->send(new OrderPlaced($order, $cartItems));
+            Mail::to($user->email)->send(new OrderPlaced($order));
             
             Log::info('COD Order created successfully:', [
                 'order_id' => $order->id,
@@ -333,8 +332,7 @@ public function handleHdfcResponse(Request $request)
             $order = $this->createOrderFromCart($userId, 'HDFC', 'Confirmed', $txnRef, $transactionId);
             
             // Send confirmation email
-            $cartItems = Cart::where('user_id', $userId)->with('product')->get();
-            Mail::to($user->email)->send(new OrderPlaced($order, $cartItems));
+            Mail::to($user->email)->send(new OrderPlaced($order));
             
             Log::info('HDFC Order created successfully:', [
                 'order_id' => $order->id,

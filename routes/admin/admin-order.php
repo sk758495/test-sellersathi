@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('admin')->middleware('auth:admin')->group(function () {
     // Admin Order Routes
     Route::get('/orders', [OrderController::class, 'viewOrders'])->name('admin.orders');
+    Route::get('/order/{order}/details', [OrderController::class, 'getOrderDetails'])->name('admin.order.details');
     Route::post('/order/{order}/confirm', [OrderController::class, 'confirmOrder'])->name('admin.order.confirm');
     Route::post('/order/{order}/cancel', [OrderController::class, 'cancelOrder'])->name('admin.order.cancel');
 });
