@@ -68,6 +68,7 @@ require __DIR__ . '/seller_admin/bankdetails.php';
 require __DIR__ . '/debug.php';
 require __DIR__ . '/test-address.php';
 require __DIR__ . '/debug-address.php';
+require __DIR__ . '/test-cart-order.php';
 
 // routes/web.php
 
@@ -95,6 +96,10 @@ Route::post('/payment/initiate', [PaymentController::class, 'initiatePayment'])-
 Route::match(['get', 'post'], '/payment/callback', [PaymentController::class, 'handleCallback'])->name('payment.callback');
 Route::post('/payment/refund', [PaymentController::class, 'processRefund'])->name('payment.refund');
 Route::get('/payment/status/{orderId}', [PaymentController::class, 'getOrderStatus'])->name('payment.status');
+
+// Order Details Route
+use App\Http\Controllers\User\PaymentController as UserPaymentController;
+Route::get('/order/{order}', [UserPaymentController::class, 'showOrderDetails'])->name('user.order.details')->middleware('auth');
 
 // Show forgot password form
 Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');

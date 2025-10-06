@@ -194,7 +194,7 @@
                 <div class="order-item">
                     <div class="order-header">
                         <div>
-                            <div class="order-id">Order #{{ $order->id }}</div>
+                            <div class="order-id">Order #{{ $order->order_number ?? $order->id }}</div>
                             <div class="order-date">{{ $order->created_at->format('d M Y, H:i') }}</div>
                         </div>
                         <span class="status-badge status-{{ strtolower(str_replace(' ', '-', $order->order_status)) }}">
@@ -203,23 +203,41 @@
                     </div>
                     
                     <div class="order-content">
-                        <div class="product-section">
-                            <img src="{{ asset('storage/' . $order->product->main_image) }}" alt="{{ $order->product->product_name }}" class="product-image">
-                            <div class="product-info">
-                                <a href="{{ route('user.view_product', $order->product->id) }}" class="product-name">
-                                    {{ $order->product->product_name }}
+                        @if($order->orderItems && $order->orderItems->count() > 0)
+                            @foreach($order->orderItems as $item)
+                            <div class="product-section">
+                                @if($item->product)
+                                <img src="{{ asset('storage/' . $item->product->main_image) }}" alt="{{ $item->product->product_name }}" class="product-image">
+                                <div class="product-info">
+                                    <a href="{{ route('user.view_product', $item->product->id) }}" class="product-name">
+                                        {{ $item->product->product_name }}
+                                    </a>
+                                    <div class="text-muted" style="font-size: 12px;">Quantity: {{ $item->quantity }} | Price: ₹{{ number_format($item->price, 2) }}</div>
+                                </div>
+                                <a href="{{ route('user.view_product', $item->product->id) }}" class="view-product">
+                                    View Product
                                 </a>
-                                <div class="text-muted" style="font-size: 12px;">Click to view product details</div>
+                                @else
+                                <div class="product-info">
+                                    <div class="product-name text-muted">Product no longer available</div>
+                                    <div class="text-muted" style="font-size: 12px;">Quantity: {{ $item->quantity }} | Price: ₹{{ number_format($item->price, 2) }}</div>
+                                </div>
+                                @endif
                             </div>
-                            <a href="{{ route('user.view_product', $order->product->id) }}" class="view-product">
-                                View Product
-                            </a>
-                        </div>
+                            @endforeach
+                        @else
+                            <div class="product-section">
+                                <div class="product-info">
+                                    <div class="product-name text-muted">Order details not available</div>
+                                    <div class="text-muted" style="font-size: 12px;">This is an older order format</div>
+                                </div>
+                            </div>
+                        @endif
                         
                         <div class="order-details">
                             <div class="detail-item">
-                                <div class="detail-label">Quantity</div>
-                                <div class="detail-value">{{ $order->quantity }}</div>
+                                <div class="detail-label">Total Items</div>
+                                <div class="detail-value">{{ $order->orderItems ? $order->orderItems->sum('quantity') : 'N/A' }}</div>
                             </div>
                             <div class="detail-item">
                                 <div class="detail-label">Total Price</div>
@@ -268,6 +286,16 @@
                                     @endif
                                 </div>
                             </div>
+                            @if($order->orderItems && $order->orderItems->count() > 0)
+                            <div class="detail-item">
+                                <div class="detail-label">Order Details</div>
+                                <div class="detail-value">
+                                    <a href="{{ route('user.order.details', $order->id) }}" class="view-product" style="font-size: 12px; padding: 6px 12px;">
+                                        View Full Details
+                                    </a>
+                                </div>
+                            </div>
+                            @endif
                         </div>
                     </div>
                 </div>

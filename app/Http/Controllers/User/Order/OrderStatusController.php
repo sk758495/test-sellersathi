@@ -15,8 +15,8 @@ class OrderStatusController extends Controller
 {
     public function order_status()
     {
-        // Fetch the orders for the authenticated user with address and product relationships
-        $orders = Order::with(['address', 'product'])
+        // Fetch the orders for the authenticated user with address and orderItems relationships
+        $orders = Order::with(['address', 'orderItems.product'])
                       ->where('user_id', auth()->user()->id)
                       ->latest()
                       ->get();

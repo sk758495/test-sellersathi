@@ -15,14 +15,14 @@ class Order extends Model
     const STATUS_CANCELLED = 'Cancelled';
 
     protected $fillable = [
-        'user_id', 'address_id', 'product_id', 'quantity', 'total_price', 'payment_method', 'order_status', 'order_id', 'transaction_id'
+        'user_id', 'address_id', 'order_number', 'subtotal', 'shipping_charge', 'total_price', 'payment_method', 'order_status', 'order_id', 'transaction_id'
     ];
     
     protected $casts = [
         'address_id' => 'integer',
         'user_id' => 'integer',
-        'product_id' => 'integer',
-        'quantity' => 'integer',
+        'subtotal' => 'decimal:2',
+        'shipping_charge' => 'decimal:2',
         'total_price' => 'decimal:2'
     ];
 
@@ -34,16 +34,35 @@ class Order extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class);  // An order belongs to a user
+        return $this->belongsTo(User::class);
     }
 
     public function address()
     {
-        return $this->belongsTo(Address::class); // Assuming an Order belongs to an Address
+        return $this->belongsTo(Address::class);
     }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    // For backward compatibility - get first product
     public function product()
     {
-        return $this->belongsTo(Product::class);  // Assuming an Order belongs to one Product
+        return $this->hasOneThrough(Product::class, OrderItem::class, 'order_id', 'id', 'id', 'product_id');
+    }
+
+    // Get total quantity of all items in order
+    public function getTotalQuantityAttribute()
+    {
+        return $this->orderItems->sum('quantity');
+    }
+
+    // Generate unique order number
+    public static function generateOrderNumber()
+    {
+        return 'ORD-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
     }
 }
 

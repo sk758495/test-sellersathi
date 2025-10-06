@@ -150,74 +150,32 @@ public function payment_page()
             return redirect()->route('cart.view')->with('error', 'Invalid cart value 😪.');
         }
 
-        $cartItems = Cart::where('user_id', $user->id)->with('product', 'product.discount')->get();
-        $shippingCharge = 10;
-        $orderIds = [];
-
-        // Create orders for COD
-        foreach ($cartItems as $cartItem) {
-            $product = $cartItem->product;
-            $price = $product->discount_price;
-
-            if ($cartItem->discount_id && $cartItem->discount) {
-                $discount = $cartItem->discount;
-                $price = $product->price - ($product->price * ($discount->discount_percentage / 100));
-            }
-
-            $totalPrice = $price * $cartItem->quantity;
-            $totalPriceWithShipping = $totalPrice + $shippingCharge;
-
-            // Ensure address exists
-            if (!$address || !$address->id) {
-                Log::error('Address validation failed for COD order', [
-                    'address' => $address ? $address->toArray() : null,
-                    'address_id' => $addressId,
-                    'user_id' => $user->id
-                ]);
-                throw new \Exception('Address not found - cannot create order');
-            }
+        try {
+            // Create single order with all cart items
+            $order = $this->createOrderFromCart($user->id, $request->payment_method, 'Pending', 'COD' . time() . rand(1000, 9999));
             
-            // Validate address_id before creating order
-            if (!$address->id || $address->id <= 0) {
-                throw new \Exception('Invalid address ID: ' . $address->id);
-            }
-            
-            $orderData = [
-                'user_id' => $user->id,
-                'address_id' => (int)$address->id,
-                'product_id' => $product->id,
-                'payment_method' => $request->payment_method,
-                'quantity' => $cartItem->quantity,
-                'total_price' => $totalPriceWithShipping,
-                'order_status' => 'Pending',
-                'order_id' => 'COD' . time() . rand(1000, 9999)
-            ];
-            
-            Log::info('Creating COD order with data:', $orderData);
-            $order = Order::create($orderData);
-
-            $orderIds[] = $order->id;
+            // Send confirmation email
+            $cartItems = Cart::where('user_id', $user->id)->with('product')->get();
+            Mail::to($user->email)->send(new OrderPlaced($order, $cartItems));
             
             Log::info('COD Order created successfully:', [
                 'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'total_items' => $order->orderItems->count(),
                 'address_id' => $address->id,
                 'user_id' => $user->id
             ]);
+            
+            return redirect()->route('user.order.details', ['order' => $order->id])
+                            ->with('success', '🥳🥳 Your order has been Received successfully 🥳🥳!');
+                            
+        } catch (\Exception $e) {
+            Log::error('Order creation failed:', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->id
+            ]);
+            return redirect()->back()->with('error', 'Failed to create order: ' . $e->getMessage());
         }
-
-        // Send confirmation emails
-        $orders = Order::whereIn('id', $orderIds)->get();
-        foreach ($orders as $order) {
-            Mail::to($user->email)->send(new OrderPlaced($order, $cartItems));
-        }
-
-        // Clear cart, cart value, and session data
-        Cart::where('user_id', $user->id)->delete();
-        CartValue::where('user_id', $user->id)->delete();
-        session()->forget('selected_address_id');
-        
-        return redirect()->route('user.order.details', ['order' => end($orderIds)])
-                        ->with('success', '🥳🥳 Your order has been Received successfully 🥳🥳!');
     }
 
 
@@ -361,6 +319,7 @@ public function handleHdfcResponse(Request $request)
                     'postal_code' => $addressData['postal_code']
                 ]);
                 $addressId = $address->id;
+                session(['payment_address_id' => $addressId]);
             }
             
             if (!$address) {
@@ -369,69 +328,26 @@ public function handleHdfcResponse(Request $request)
             }
             
             Log::info('Using address:', ['address' => $address->toArray()]);
-            $cartItems = Cart::where('user_id', $userId)->with('product', 'product.discount')->get();
             
-            if ($cartItems->isEmpty()) {
-                return redirect()->route('user.cart')->with('error', 'Cart is empty.');
-            }
+            // Create single order with all cart items
+            $order = $this->createOrderFromCart($userId, 'HDFC', 'Confirmed', $txnRef, $transactionId);
+            
+            // Send confirmation email
+            $cartItems = Cart::where('user_id', $userId)->with('product')->get();
+            Mail::to($user->email)->send(new OrderPlaced($order, $cartItems));
+            
+            Log::info('HDFC Order created successfully:', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'total_items' => $order->orderItems->count(),
+                'transaction_id' => $transactionId,
+                'address_id' => $address->id
+            ]);
 
-            $shippingCharge = 10;
-            $orderIds = [];
-
-            // Create orders for successful payment
-            foreach ($cartItems as $cartItem) {
-                $product = $cartItem->product;
-                $price = $product->discount_price;
-
-                if ($cartItem->discount_id && $cartItem->discount) {
-                    $discount = $cartItem->discount;
-                    $price = $product->price - ($product->price * ($discount->discount_percentage / 100));
-                }
-
-                $totalPrice = $price * $cartItem->quantity;
-                $totalPriceWithShipping = $totalPrice + $shippingCharge;
-                
-                // Validate address_id before creating order
-                if (!$address->id || $address->id <= 0) {
-                    throw new \Exception('Invalid address ID: ' . $address->id);
-                }
-                
-                $orderData = [
-                    'user_id' => $userId,
-                    'address_id' => (int)$address->id,
-                    'product_id' => $product->id,
-                    'payment_method' => 'HDFC',
-                    'quantity' => $cartItem->quantity,
-                    'total_price' => $totalPriceWithShipping,
-                    'order_status' => 'Confirmed',
-                    'order_id' => $txnRef,
-                    'transaction_id' => $transactionId
-                ];
-                
-                Log::info('Creating HDFC order with data:', $orderData);
-                $order = Order::create($orderData);
-
-                $orderIds[] = $order->id;
-                
-                Log::info('Order created successfully:', [
-                    'order_id' => $order->id,
-                    'transaction_id' => $transactionId,
-                    'address_id' => $address->id
-                ]);
-            }
-
-            // Send confirmation emails
-            $orders = Order::whereIn('id', $orderIds)->get();
-            foreach ($orders as $order) {
-                Mail::to($user->email)->send(new OrderPlaced($order, $cartItems));
-            }
-
-            // Clear cart and session
-            Cart::where('user_id', $userId)->delete();
-            CartValue::where('user_id', $userId)->delete();
+            // Clear session
             session()->forget(['hdfc_txn_ref', 'payment_amount', 'payment_user_id', 'payment_address_id', 'payment_address_data', 'selected_address_id']);
 
-            return redirect()->route('user.order.details', ['order' => end($orderIds)])
+            return redirect()->route('user.order.details', ['order' => $order->id])
                             ->with('success', '🎉 Payment successful! Your order has been confirmed.');
                             
         } catch (\Exception $e) {
@@ -449,11 +365,78 @@ public function handleHdfcResponse(Request $request)
     }
 }
 
+private function createOrderFromCart($userId, $paymentMethod, $orderStatus, $orderId = null, $transactionId = null)
+{
+    $carts = Cart::where('user_id', $userId)->with(['product', 'discount'])->get();
+    $addressId = session('payment_address_id') ?? session('selected_address_id');
+    
+    if ($carts->isEmpty()) {
+        throw new \Exception('Cart is empty');
+    }
+    
+    if (!$addressId) {
+        throw new \Exception('No address selected');
+    }
+    
+    // Calculate totals
+    $subtotal = 0;
+    $orderItems = [];
+    
+    foreach ($carts as $cart) {
+        $product = $cart->product;
+        $price = $product->discount_price;
+        
+        if ($cart->discount_id && $cart->discount) {
+            $price = $product->price - ($product->price * ($cart->discount->discount_percentage / 100));
+        }
+        
+        $itemTotal = $price * $cart->quantity;
+        $subtotal += $itemTotal;
+        
+        $orderItems[] = [
+            'product_id' => $product->id,
+            'quantity' => $cart->quantity,
+            'price' => $price,
+            'total_price' => $itemTotal,
+            'discount_id' => $cart->discount_id
+        ];
+    }
+    
+    $shippingCharge = 50;
+    $totalPrice = $subtotal + $shippingCharge;
+    
+    // Create single order
+    $order = Order::create([
+        'user_id' => $userId,
+        'address_id' => $addressId,
+        'order_number' => Order::generateOrderNumber(),
+        'subtotal' => $subtotal,
+        'shipping_charge' => $shippingCharge,
+        'total_price' => $totalPrice,
+        'payment_method' => $paymentMethod,
+        'order_status' => $orderStatus,
+        'order_id' => $orderId,
+        'transaction_id' => $transactionId
+    ]);
+    
+    // Create order items
+    foreach ($orderItems as $item) {
+        $item['order_id'] = $order->id;
+        \App\Models\OrderItem::create($item);
+    }
+    
+    // Clear cart and session
+    Cart::where('user_id', $userId)->delete();
+    CartValue::where('user_id', $userId)->delete();
+    
+    return $order;
+}
+
 
     public function showOrderDetails($orderId)
     {
-        $order = Order::with(['user', 'product', 'address'])->where('user_id', Auth::id())->findOrFail($orderId);
-        return view('user.payment.details', compact('order'));
+        $order = Order::with(['user', 'orderItems.product', 'address'])->where('user_id', Auth::id())->findOrFail($orderId);
+        return view('user.order-details', compact('order'));
     }
 
 

@@ -70,6 +70,11 @@ public function addresses()
     return $this->hasMany(Order::class);
 }
 
+public function orderItems()
+{
+    return $this->hasManyThrough(OrderItem::class, Order::class);
+}
+
 
 public function sellerCarts()
 {

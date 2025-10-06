@@ -399,8 +399,8 @@ class UserController extends Controller
             return $price * $cart->quantity;
         });
 
-        // Calculate shipping (for now, it's a flat fee of $10, you can change the logic as needed)
-        $shipping = 10;
+        // Calculate shipping (for now, it's a flat fee of ₹50, you can change the logic as needed)
+        $shipping = 50;
 
         // The total price is the subtotal plus shipping
         $total = $subtotal + $shipping;
@@ -425,107 +425,116 @@ class UserController extends Controller
 
 
     public function updateCartQuantity(Request $request)
-{
-    try {
-        // Validate the request data
-        $validated = $request->validate([
-            'cart_id' => 'required|exists:carts,id',
-            'quantity' => 'required|integer|min:1',
-        ]);
+    {
+        try {
+            Log::info('Cart update request:', $request->all());
+            
+            $validated = $request->validate([
+                'cart_id' => 'required|exists:carts,id',
+                'quantity' => 'required|integer|min:1|max:99',
+            ]);
 
-        // Retrieve the logged-in user
-        $user = Auth::user();
+            $user = Auth::user();
+            Log::info('User ID:', ['user_id' => $user->id]);
+            
+            $cart = $user->carts()->with(['product', 'discount'])->find($request->cart_id);
+            Log::info('Cart found:', ['cart' => $cart ? $cart->toArray() : null]);
 
-        // Find the cart item by ID
-        $cart = $user->carts()->find($request->cart_id);
+            if (!$cart) {
+                return response()->json(['error' => 'Cart item not found'], 404);
+            }
 
-        // Check if cart item exists
-        if (!$cart) {
-            return response()->json(['error' => 'Cart item not found '], 404);
+            $cart->quantity = $request->quantity;
+            $cart->save();
+
+            // Calculate item price with discount if applicable
+            $itemPrice = $cart->product->discount_price;
+            if ($cart->discount_id && $cart->discount) {
+                $itemPrice = $cart->product->price - ($cart->product->price * ($cart->discount->discount_percentage / 100));
+            }
+            $itemTotal = $itemPrice * $cart->quantity;
+
+            // Recalculate subtotal for all cart items
+            $user->load(['carts.product', 'carts.discount']);
+            $subtotal = $user->carts->sum(function ($cartItem) {
+                $price = $cartItem->product->discount_price;
+                if ($cartItem->discount_id && $cartItem->discount) {
+                    $price = $cartItem->product->price - ($cartItem->product->price * ($cartItem->discount->discount_percentage / 100));
+                }
+                return $price * $cartItem->quantity;
+            });
+
+            $shipping = 50;
+            $total = $subtotal + $shipping;
+
+            return response()->json([
+                'item_total' => number_format($itemTotal, 2),
+                'subtotal' => number_format($subtotal, 2),
+                'total' => number_format($total, 2),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error updating cart: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response()->json(['error' => 'Failed to update cart: ' . $e->getMessage()], 500);
         }
-
-        // Update the quantity of the cart item
-        $cart->quantity = $request->quantity;
-        $cart->save();
-
-        // Calculate the new item total
-        $itemTotal = $cart->product->discount_price * $cart->quantity;
-
-        // Recalculate the subtotal for the updated cart
-        $subtotal = $user->carts->sum(function ($cart) {
-            return $cart->product->discount_price * $cart->quantity;
-        });
-
-        // Assuming a flat shipping fee of $10
-        $shipping = 50;
-        $total = $subtotal + $shipping;
-
-        // Update the CartValue for the user
-        CartValue::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'cart_id' => $cart->id // You can use any cart item id or aggregate logic if needed
-            ],
-            [
-                'subtotal' => $subtotal,
-                'shipping' => $shipping,
-                'total_price' => $total,
-            ]
-        );
-
-        // Return the updated totals as a JSON response
-        return response()->json([
-            'item_total' => number_format($itemTotal, 2), // Format as money
-            'subtotal' => number_format($subtotal, 2),   // Format as money
-            'total' => number_format($total, 2),         // Format as money
-        ]);
-
-    } catch (\Exception $e) {
-        // Log the exception and return a 500 error
-        Log::error('Error updating cart: ' . $e->getMessage());
-        return response()->json(['error' => 'Server error, please try again later'], 500);
     }
-}
 
 
 
-public function removeFromCart(Request $request)
-{
-    try {
-        // Validate the request data
-        $validated = $request->validate([
-            'cart_id' => 'required|exists:carts,id',
-        ]);
-
-        // Retrieve the logged-in user
-        $user = Auth::user();
-
-        // Find the cart item by ID
-        $cart = $user->carts()->findOrFail($request->cart_id);
-
-        // Delete the cart item
-        $cart->delete();
-
-        // Recalculate the subtotal and total after removal
-        $subtotal = $user->carts->sum(function ($cart) {
-            return $cart->product->discount_price * $cart->quantity;
-        });
-
-        $shipping = 10;
-        $total = $subtotal + $shipping;
-
-        // Return updated totals as a JSON response
-        return response()->json([
-            'subtotal' => number_format($subtotal, 2), // Format as money
-            'total' => number_format($total, 2),       // Format as money
-        ]);
-
-    } catch (\Exception $e) {
-        // Log the exception and return a 500 error
-        Log::error('Error removing item from cart: ' . $e->getMessage());
-        return response()->json(['error' => 'Server error, please try again later'], 500);
+    public function updateCartBulk(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            foreach ($request->updates as $update) {
+                $cart = $user->carts()->find($update['cart_id']);
+                if ($cart && $update['quantity'] >= 1 && $update['quantity'] <= 99) {
+                    $cart->quantity = $update['quantity'];
+                    $cart->save();
+                }
+            }
+            
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to update cart'], 500);
+        }
     }
-}
+
+    public function removeFromCart(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'cart_id' => 'required|exists:carts,id',
+            ]);
+
+            $user = Auth::user();
+            $cart = $user->carts()->findOrFail($request->cart_id);
+            $cart->delete();
+
+            // Recalculate subtotal with proper discount handling
+            $user->load(['carts.product', 'carts.discount']);
+            $subtotal = $user->carts->sum(function ($cartItem) {
+                $price = $cartItem->product->discount_price;
+                if ($cartItem->discount_id && $cartItem->discount) {
+                    $price = $cartItem->product->price - ($cartItem->product->price * ($cartItem->discount->discount_percentage / 100));
+                }
+                return $price * $cartItem->quantity;
+            });
+
+            $shipping = 50;
+            $total = $subtotal + $shipping;
+
+            return response()->json([
+                'subtotal' => number_format($subtotal, 2),
+                'total' => number_format($total, 2),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error removing item from cart: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to remove item'], 500);
+        }
+    }
 
 
 // Payment Method
@@ -653,28 +662,7 @@ public function handlePaymentCallback(Request $request)
             $userId = isset($orderParts[1]) ? $orderParts[1] : null;
             
             if ($userId) {
-                $carts = Cart::where('user_id', $userId)->with('product')->get();
-                $addressId = session('order_address_id');
-                
-                // Create orders for each cart item
-                foreach ($carts as $cart) {
-                    \App\Models\Order::create([
-                        'user_id' => $userId,
-                        'product_id' => $cart->product_id,
-                        'quantity' => $cart->quantity,
-                        'total_price' => $cart->product->discount_price * $cart->quantity,
-                        'payment_method' => 'hdfc',
-                        'order_status' => 'Confirmed',
-                        'order_id' => $orderId,
-                        'transaction_id' => $order['transaction_id'] ?? null,
-                        'address_id' => $addressId
-                    ]);
-                }
-                
-                // Clear cart and session after creating orders
-                Cart::where('user_id', $userId)->delete();
-                CartValue::where('user_id', $userId)->delete();
-                session()->forget('order_address_id');
+                $this->createOrderFromCart($userId, 'hdfc', 'Confirmed', $orderId, $order['transaction_id'] ?? null);
             }
             session()->forget('pending_order');
         }
@@ -687,6 +675,70 @@ public function handlePaymentCallback(Request $request)
     }
     
     return redirect()->route('dashboard')->with('error', 'Payment verification failed: ' . $response);
+}
+
+private function createOrderFromCart($userId, $paymentMethod, $orderStatus, $orderId = null, $transactionId = null)
+{
+    $carts = Cart::where('user_id', $userId)->with(['product', 'discount'])->get();
+    $addressId = session('order_address_id');
+    
+    if ($carts->isEmpty()) {
+        throw new \Exception('Cart is empty');
+    }
+    
+    // Calculate totals
+    $subtotal = 0;
+    $orderItems = [];
+    
+    foreach ($carts as $cart) {
+        $product = $cart->product;
+        $price = $product->discount_price;
+        
+        if ($cart->discount_id && $cart->discount) {
+            $price = $product->price - ($product->price * ($cart->discount->discount_percentage / 100));
+        }
+        
+        $itemTotal = $price * $cart->quantity;
+        $subtotal += $itemTotal;
+        
+        $orderItems[] = [
+            'product_id' => $product->id,
+            'quantity' => $cart->quantity,
+            'price' => $price,
+            'total_price' => $itemTotal,
+            'discount_id' => $cart->discount_id
+        ];
+    }
+    
+    $shippingCharge = 50;
+    $totalPrice = $subtotal + $shippingCharge;
+    
+    // Create single order
+    $order = \App\Models\Order::create([
+        'user_id' => $userId,
+        'address_id' => $addressId,
+        'order_number' => \App\Models\Order::generateOrderNumber(),
+        'subtotal' => $subtotal,
+        'shipping_charge' => $shippingCharge,
+        'total_price' => $totalPrice,
+        'payment_method' => $paymentMethod,
+        'order_status' => $orderStatus,
+        'order_id' => $orderId,
+        'transaction_id' => $transactionId
+    ]);
+    
+    // Create order items
+    foreach ($orderItems as $item) {
+        $item['order_id'] = $order->id;
+        \App\Models\OrderItem::create($item);
+    }
+    
+    // Clear cart and session
+    Cart::where('user_id', $userId)->delete();
+    CartValue::where('user_id', $userId)->delete();
+    session()->forget('order_address_id');
+    
+    return $order;
 }
 
 private function getPaymentStatusMessage($order)

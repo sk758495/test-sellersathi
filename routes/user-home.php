@@ -39,6 +39,8 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/update-cart-quantity', [UserController::class, 'updateCartQuantity'])->name('update.cart.quantity');
 
+    Route::post('/update-cart-bulk', [UserController::class, 'updateCartBulk'])->name('update.cart.bulk');
+
     Route::delete('/remove-from-cart', [UserController::class, 'removeFromCart'])->name('remove.from.cart');
 
 
