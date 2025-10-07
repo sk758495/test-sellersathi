@@ -708,7 +708,28 @@ public function handlePaymentCallback(Request $request)
             $userId = isset($orderParts[1]) ? $orderParts[1] : null;
             
             if ($userId) {
-                $this->createOrderFromCart($userId, 'hdfc', 'Confirmed', $orderId, $order['transaction_id'] ?? null);
+                $carts = Cart::where('user_id', $userId)->with('product')->get();
+                $addressId = session('order_address_id');
+                
+                // Create orders for each cart item (original multiple product feature)
+                foreach ($carts as $cart) {
+                    \App\Models\Order::create([
+                        'user_id' => $userId,
+                        'product_id' => $cart->product_id,
+                        'quantity' => $cart->quantity,
+                        'total_price' => $cart->product->discount_price * $cart->quantity,
+                        'payment_method' => 'hdfc',
+                        'order_status' => 'Confirmed',
+                        'order_id' => $orderId,
+                        'transaction_id' => $order['transaction_id'] ?? null,
+                        'address_id' => $addressId
+                    ]);
+                }
+                
+                // Clear cart and session after creating orders
+                Cart::where('user_id', $userId)->delete();
+                CartValue::where('user_id', $userId)->delete();
+                session()->forget('order_address_id');
                 session()->forget('pending_order');
                 return view('user.payment-success', compact('order'));
             }
@@ -724,69 +745,7 @@ public function handlePaymentCallback(Request $request)
     }
 }
 
-private function createOrderFromCart($userId, $paymentMethod, $orderStatus, $orderId = null, $transactionId = null)
-{
-    $carts = Cart::where('user_id', $userId)->with(['product', 'discount'])->get();
-    $addressId = session('order_address_id');
-    
-    if ($carts->isEmpty()) {
-        throw new \Exception('Cart is empty');
-    }
-    
-    // Calculate totals
-    $subtotal = 0;
-    $orderItems = [];
-    
-    foreach ($carts as $cart) {
-        $product = $cart->product;
-        $price = $product->discount_price;
-        
-        if ($cart->discount_id && $cart->discount) {
-            $price = $product->price - ($product->price * ($cart->discount->discount_percentage / 100));
-        }
-        
-        $itemTotal = $price * $cart->quantity;
-        $subtotal += $itemTotal;
-        
-        $orderItems[] = [
-            'product_id' => $product->id,
-            'quantity' => $cart->quantity,
-            'price' => $price,
-            'total_price' => $itemTotal,
-            'discount_id' => $cart->discount_id
-        ];
-    }
-    
-    $shippingCharge = 50;
-    $totalPrice = $subtotal + $shippingCharge;
-    
-    // Create single order
-    $order = \App\Models\Order::create([
-        'user_id' => $userId,
-        'address_id' => $addressId,
-        'order_number' => \App\Models\Order::generateOrderNumber(),
-        'subtotal' => $subtotal,
-        'shipping_charge' => $shippingCharge,
-        'total_price' => $totalPrice,
-        'payment_method' => $paymentMethod,
-        'order_status' => $orderStatus,
-        'order_id' => $orderId,
-        'transaction_id' => $transactionId
-    ]);
-    
-    // Create order items
-    foreach ($orderItems as $item) {
-        $item['order_id'] = $order->id;
-        \App\Models\OrderItem::create($item);
-    }
-    
-    // Clear cart and session
-    Cart::where('user_id', $userId)->delete();
-    CartValue::where('user_id', $userId)->delete();
-    session()->forget('order_address_id');
-    
-    return $order;
-}
+
 
 private function getPaymentStatusMessage($order)
 {
