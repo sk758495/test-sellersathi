@@ -558,123 +558,170 @@ public function placeOrder(Request $request)
 
 public function initiateHdfcPayment(Request $request)
 {
-    $user = Auth::user();
-    $cartValue = CartValue::where('user_id', $user->id)->first();
-    
-    if (!$cartValue) {
-        return redirect()->back()->with('error', 'Cart not found.');
-    }
-    
-    $orderId = "order_" . $user->id . "_" . time();
-    $customerId = "customer_" . $user->id;
-    
-    // Store order data in session for callback
-    session([
-        'pending_order' => [
-            'payment_method' => 'hdfc',
-            'total_amount' => $cartValue->total_price,
-            'order_id' => $orderId
-        ]
-    ]);
-    
-    $data = [
-        "order_id" => $orderId,
-        "amount" => number_format($cartValue->total_price, 1, '.', ''),
-        "currency" => "INR",
-        "customer_id" => $customerId,
-        "customer_email" => $user->email,
-        "customer_phone" => $user->phone ?? "9876543210",
-        "payment_page_client_id" => "hdfcmaster",
-        "action" => "paymentPage",
-        "return_url" => route('hdfc.user.callback'),
-        "description" => "Complete your payment",
-        "first_name" => $user->name ?? "Customer",
-        "last_name" => ""
-    ];
-    
-    $curl = curl_init();
-    curl_setopt_array($curl, [
-        CURLOPT_URL => 'https://smartgatewayuat.hdfcbank.com/session',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => json_encode($data),
-        CURLOPT_HTTPHEADER => [
-            'x-merchantid: SG3589',
-            'x-customerid: ' . $customerId,
-            'Content-Type: application/JSON',
-            'version: 2023-06-30',
-            'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg=='
-        ]
-    ]);
-    
-    $response = curl_exec($curl);
-    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-    curl_close($curl);
-    
-    if ($httpCode === 200) {
-        $result = json_decode($response, true);
-        if (isset($result['payment_links']['web'])) {
-            header("Location: " . $result['payment_links']['web']);
-            exit;
+    try {
+        $user = Auth::user();
+        $cartValue = CartValue::where('user_id', $user->id)->first();
+        
+        if (!$cartValue) {
+            return redirect()->back()->with('error', 'Cart not found.');
         }
+        
+        $orderId = "order_" . $user->id . "_" . time();
+        $customerId = "customer_" . $user->id;
+        
+        // Store order data in session for callback
+        session([
+            'pending_order' => [
+                'payment_method' => 'hdfc',
+                'total_amount' => $cartValue->total_price,
+                'order_id' => $orderId
+            ]
+        ]);
+        
+        $data = [
+            "order_id" => $orderId,
+            "amount" => number_format($cartValue->total_price, 2, '.', ''),
+            "currency" => "INR",
+            "customer_id" => $customerId,
+            "customer_email" => $user->email,
+            "customer_phone" => $user->phone ?? "9876543210",
+            "payment_page_client_id" => "hdfcmaster",
+            "action" => "paymentPage",
+            "return_url" => route('hdfc.user.callback'),
+            "description" => "Order Payment - Gujju E Market",
+            "first_name" => $user->name ?? "Customer",
+            "last_name" => ""
+        ];
+        
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => 'https://smartgatewayuat.hdfcbank.com/session',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($data),
+            CURLOPT_HTTPHEADER => [
+                'x-merchantid: SG3589',
+                'x-customerid: ' . $customerId,
+                'Content-Type: application/JSON',
+                'version: 2023-06-30',
+                'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg=='
+            ],
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 3
+        ]);
+        
+        $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($curl);
+        curl_close($curl);
+        
+        Log::info('HDFC Payment Request', [
+            'order_id' => $orderId,
+            'amount' => $cartValue->total_price,
+            'http_code' => $httpCode,
+            'response' => $response,
+            'curl_error' => $curlError
+        ]);
+        
+        if ($curlError) {
+            throw new \Exception('Connection error: ' . $curlError);
+        }
+        
+        if ($httpCode === 200) {
+            $result = json_decode($response, true);
+            if (isset($result['payment_links']['web'])) {
+                return redirect($result['payment_links']['web']);
+            }
+            throw new \Exception('Invalid payment response: ' . $response);
+        }
+        
+        throw new \Exception('Payment gateway error. HTTP Code: ' . $httpCode);
+        
+    } catch (\Exception $e) {
+        Log::error('HDFC Payment Error: ' . $e->getMessage());
+        return redirect()->back()->with('error', 'Payment failed. Please try again.');
     }
-    
-    return redirect()->back()->with('error', 'Payment initiation failed: ' . $response);
 }
 
 public function handlePaymentCallback(Request $request)
 {
-    if (isset($_POST["order_id"])) {
-        $params = $_POST;
-    } else if (isset($_GET["order_id"])) {
-        $params = $_GET;
-    } else {
-        return redirect()->route('dashboard')->with('error', 'Invalid payment response.');
-    }
-    
-    $orderId = $params["order_id"];
-    
-    // Get order status using exact API format
-    $curl = curl_init();
-    curl_setopt_array($curl, [
-        CURLOPT_URL => 'https://smartgatewayuat.hdfcbank.com/orders/' . $orderId,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPGET => true,
-        CURLOPT_HTTPHEADER => [
-            'x-merchantid: SG3589',
-            'x-customerid: 325345',
-            'Content-Type: application/x-www-form-urlencoded',
-            'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg=='
-        ]
-    ]);
-    
-    $response = curl_exec($curl);
-    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-    curl_close($curl);
-    
-    if ($httpCode === 200) {
-        $order = json_decode($response, true);
+    try {
+        $params = array_merge($_GET, $_POST);
         
-        // If payment successful, create order and clear cart
-        if ($order["status"] === "CHARGED") {
-            // Extract user ID from order ID (format: order_userId_timestamp)
+        if (!isset($params['order_id'])) {
+            throw new \Exception('Order ID not found in callback');
+        }
+        
+        $orderId = $params['order_id'];
+        Log::info('Payment Callback Received', ['order_id' => $orderId, 'params' => $params]);
+        
+        // Get order status with retry mechanism
+        $maxRetries = 3;
+        $order = null;
+        
+        for ($i = 0; $i < $maxRetries; $i++) {
+            $curl = curl_init();
+            curl_setopt_array($curl, [
+                CURLOPT_URL => 'https://smartgatewayuat.hdfcbank.com/orders/' . $orderId,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPGET => true,
+                CURLOPT_HTTPHEADER => [
+                    'x-merchantid: SG3589',
+                    'x-customerid: 325345',
+                    'Content-Type: application/x-www-form-urlencoded',
+                    'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg=='
+                ],
+                CURLOPT_TIMEOUT => 15,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => false
+            ]);
+            
+            $response = curl_exec($curl);
+            $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($curl);
+            curl_close($curl);
+            
+            if (!$curlError && $httpCode === 200) {
+                $order = json_decode($response, true);
+                break;
+            }
+            
+            if ($i < $maxRetries - 1) {
+                sleep(2); // Wait 2 seconds before retry
+            }
+        }
+        
+        if (!$order) {
+            throw new \Exception('Failed to verify payment status after retries');
+        }
+        
+        Log::info('Payment Status Retrieved', ['order' => $order]);
+        
+        // Process successful payment
+        if ($order['status'] === 'CHARGED') {
             $orderParts = explode('_', $orderId);
             $userId = isset($orderParts[1]) ? $orderParts[1] : null;
             
             if ($userId) {
                 $this->createOrderFromCart($userId, 'hdfc', 'Confirmed', $orderId, $order['transaction_id'] ?? null);
+                session()->forget('pending_order');
+                return view('user.payment-success', compact('order'));
             }
-            session()->forget('pending_order');
         }
         
-        if ($order["status"] === "CHARGED") {
-            return view('user.payment-success', compact('order'));
-        } else {
-            return redirect()->route('dashboard')->with('error', 'Payment failed: ' . ($order['status'] ?? 'Unknown error'));
-        }
+        // Handle failed/pending payments
+        $errorMessage = $this->getPaymentStatusMessage($order);
+        return redirect()->route('dashboard')->with('error', $errorMessage);
+        
+    } catch (\Exception $e) {
+        Log::error('Payment Callback Error: ' . $e->getMessage());
+        return redirect()->route('dashboard')->with('error', 'Payment verification failed. Please contact support.');
     }
-    
-    return redirect()->route('dashboard')->with('error', 'Payment verification failed: ' . $response);
 }
 
 private function createOrderFromCart($userId, $paymentMethod, $orderStatus, $orderId = null, $transactionId = null)
