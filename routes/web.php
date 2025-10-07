@@ -21,7 +21,6 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/admin/products/search', [ProductController::class, 'search'])->name('admin.product.search');
 
-
 require __DIR__ . '/auth.php';
 
 require __DIR__ . '/user-home.php';
@@ -29,8 +28,6 @@ require __DIR__ . '/user-home.php';
 require __DIR__ . '/user-discount.php';
 
 require __DIR__ . '/user-order-status.php';
-
-
 
 // Admin Routes
 require __DIR__ . '/admin/admin-auth.php';
