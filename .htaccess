@@ -1,17 +1,44 @@
-<IfModule mod_rewrite.c>
-    Options +FollowSymlinks
-    RewriteEngine On
+RewriteEngine On
 
-    # Ensure the request URI does not start with /public/
-    RewriteCond %{REQUEST_URI} !^/public/
+# Handle Angular and Vue.js Router
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ /index.php [QSA,L]
 
-    # Ensure the requested file or directory exists
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME} !-f
+# PHP Configuration for Production
+php_value max_execution_time 300
+php_value max_input_time 300
+php_value memory_limit 512M
+php_value post_max_size 50M
+php_value upload_max_filesize 50M
+php_value session.gc_maxlifetime 14400
+php_value default_socket_timeout 180
 
-    # Rewrite all requests to the public directory
-    RewriteRule ^(.*)$ /public/$1 [L]
+# Security Headers
+Header always set X-Content-Type-Options nosniff
+Header always set X-Frame-Options DENY
+Header always set X-XSS-Protection "1; mode=block"
+Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
-    # If nothing matches, send to index.php
-    RewriteRule ^(/)?$ /public/index.php [L]
+# Compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+</IfModule>
+
+# Cache Control
+<IfModule mod_expires.c>
+    ExpiresActive on
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
 </IfModule>
