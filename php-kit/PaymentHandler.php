@@ -180,16 +180,6 @@ class PaymentEntity {
         curl_setopt ( $curlObject, CURLOPT_USERPWD, $paymentHandlerConfig->getApiKey () );
         curl_setopt ( $curlObject, CURLOPT_HTTPAUTH, CURLAUTH_BASIC );
         curl_setopt ( $curlObject, CURLOPT_USERAGENT,  "SAMPLE_KIT/" . $paymentHandlerConfig->getMerchantId());
-        curl_setopt ( $curlObject, CURLOPT_TIMEOUT, 180 );
-        curl_setopt ( $curlObject, CURLOPT_CONNECTTIMEOUT, 30 );
-        curl_setopt ( $curlObject, CURLOPT_SSL_VERIFYPEER, true );
-        curl_setopt ( $curlObject, CURLOPT_SSL_VERIFYHOST, 2 );
-        curl_setopt ( $curlObject, CURLOPT_FOLLOWLOCATION, true );
-        curl_setopt ( $curlObject, CURLOPT_MAXREDIRS, 3 );
-        curl_setopt ( $curlObject, CURLOPT_DNS_CACHE_TIMEOUT, 300 );
-        curl_setopt ( $curlObject, CURLOPT_TCP_KEEPALIVE, 1 );
-        curl_setopt ( $curlObject, CURLOPT_TCP_KEEPIDLE, 2 );
-        curl_setopt ( $curlObject, CURLOPT_TCP_KEEPINTVL, 2 );
         $headers = array('version: ' . $paymentHandlerConfig->getAPIVersion());
         if ($paymentHandlerConfig->getMerchantId()) array_push($headers, 'x-merchantid:'. $paymentHandlerConfig->getMerchantId());
         
