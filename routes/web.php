@@ -101,6 +101,10 @@ Route::get('/payment/status/{orderId}', [PaymentController::class, 'getOrderStat
 use App\Http\Controllers\User\PaymentController as UserPaymentController;
 Route::get('/order/{order}', [UserPaymentController::class, 'showOrderDetails'])->name('user.order.details')->middleware('auth');
 
+// Payment session extension route
+Route::post('/user/payment/extend-session', [UserPaymentController::class, 'extendPaymentSession'])->name('user.payment.extend')->middleware('auth');
+Route::match(['get', 'post'], '/user/hdfc/response', [UserPaymentController::class, 'handleHdfcResponse'])->name('user.hdfc.response');
+
 // Show forgot password form
 Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
 

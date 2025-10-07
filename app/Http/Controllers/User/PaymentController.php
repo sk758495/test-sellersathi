@@ -225,7 +225,14 @@ private function initiateHdfcPayment(Request $request)
     ];
 
     try {
-        $response = Http::timeout(30)->post("$baseUrl/payment/api/order/initiate", $payload);
+        $response = Http::timeout(120)
+            ->retry(3, 2000)
+            ->withOptions([
+                'verify' => true,
+                'connect_timeout' => 30,
+                'read_timeout' => 120
+            ])
+            ->post("$baseUrl/payment/api/order/initiate", $payload);
 
         if ($response->successful()) {
             $res = $response->json();
@@ -435,6 +442,35 @@ private function createOrderFromCart($userId, $paymentMethod, $orderStatus, $ord
     {
         $order = Order::with(['user', 'orderItems.product', 'address'])->where('user_id', Auth::id())->findOrFail($orderId);
         return view('user.order-details', compact('order'));
+    }
+    
+    public function extendPaymentSession(Request $request)
+    {
+        try {
+            // Extend session lifetime
+            config(['session.lifetime' => 300]); // 5 hours
+            
+            // Regenerate session to prevent fixation
+            $request->session()->regenerate();
+            
+            Log::info('Payment session extended for user:', ['user_id' => auth()->id()]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Session extended successfully',
+                'new_timeout' => 300 * 60 * 1000 // 5 hours in milliseconds
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to extend payment session:', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to extend session'
+            ], 500);
+        }
     }
 
 

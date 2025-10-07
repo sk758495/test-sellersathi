@@ -32,56 +32,85 @@ class PaymentService
             "description" => "Complete your payment"
         ];
         
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => $this->baseUrl . '/session',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($data),
-            CURLOPT_HTTPHEADER => [
-                'x-merchantid: ' . $this->merchantId,
-                'x-customerid: ' . $customerId,
-                'Content-Type: application/JSON',
-                'version: 2023-06-30',
-                'Authorization: ' . $this->authorization
-            ]
-        ]);
+        return $this->makeRequest('/session', $data, 'POST', 120);
+    }
+    
+    private function makeRequest($endpoint, $data = null, $method = 'GET', $timeout = 60, $retries = 3)
+    {
+        $attempt = 0;
         
-        $response = curl_exec($curl);
-        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        curl_close($curl);
-        
-        if ($httpCode !== 200) {
-            throw new Exception('Payment session creation failed: ' . $response);
+        while ($attempt < $retries) {
+            try {
+                $curl = curl_init();
+                
+                $curlOptions = [
+                    CURLOPT_URL => $this->baseUrl . $endpoint,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => $timeout,
+                    CURLOPT_CONNECTTIMEOUT => 30,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_SSL_VERIFYHOST => 2,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_MAXREDIRS => 3,
+                    CURLOPT_USERAGENT => 'Laravel Payment Gateway Client',
+                    CURLOPT_HTTPHEADER => [
+                        'x-merchantid: ' . $this->merchantId,
+                        'x-customerid: ' . $this->customerId,
+                        'Content-Type: application/JSON',
+                        'version: 2023-06-30',
+                        'Authorization: ' . $this->authorization
+                    ]
+                ];
+                
+                if ($method === 'POST' && $data) {
+                    $curlOptions[CURLOPT_POST] = true;
+                    $curlOptions[CURLOPT_POSTFIELDS] = json_encode($data);
+                }
+                
+                curl_setopt_array($curl, $curlOptions);
+                
+                $response = curl_exec($curl);
+                $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+                $curlError = curl_error($curl);
+                curl_close($curl);
+                
+                if ($curlError) {
+                    throw new Exception('cURL Error: ' . $curlError);
+                }
+                
+                if ($httpCode === 200) {
+                    return json_decode($response, true);
+                }
+                
+                // If not successful, log and retry
+                \Log::warning('Payment API request failed', [
+                    'attempt' => $attempt + 1,
+                    'http_code' => $httpCode,
+                    'response' => $response,
+                    'endpoint' => $endpoint
+                ]);
+                
+            } catch (Exception $e) {
+                \Log::error('Payment API exception', [
+                    'attempt' => $attempt + 1,
+                    'error' => $e->getMessage(),
+                    'endpoint' => $endpoint
+                ]);
+            }
+            
+            $attempt++;
+            
+            if ($attempt < $retries) {
+                sleep(2); // Wait 2 seconds before retry
+            }
         }
         
-        return json_decode($response, true);
+        throw new Exception('Payment request failed after ' . $retries . ' attempts');
     }
     
     public function getOrderStatus($orderId)
     {
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => $this->baseUrl . '/orders/' . $orderId,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPGET => true,
-            CURLOPT_HTTPHEADER => [
-                'x-merchantid: ' . $this->merchantId,
-                'x-customerid: ' . $this->customerId,
-                'Content-Type: application/x-www-form-urlencoded',
-                'Authorization: ' . $this->authorization
-            ]
-        ]);
-        
-        $response = curl_exec($curl);
-        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        curl_close($curl);
-        
-        if ($httpCode !== 200) {
-            throw new Exception('Order status check failed: ' . $response);
-        }
-        
-        return json_decode($response, true);
+        return $this->makeRequest('/orders/' . $orderId, null, 'GET', 60);
     }
     
     public function validateHMAC($params)
@@ -118,28 +147,6 @@ class PaymentService
             "unique_request_id" => $uniqueRequestId
         ];
         
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => $this->baseUrl . '/refunds',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($data),
-            CURLOPT_HTTPHEADER => [
-                'x-merchantid: ' . $this->merchantId,
-                'x-customerid: ' . $this->customerId,
-                'Content-Type: application/JSON',
-                'Authorization: ' . $this->authorization
-            ]
-        ]);
-        
-        $response = curl_exec($curl);
-        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-        curl_close($curl);
-        
-        if ($httpCode !== 200) {
-            throw new Exception('Refund processing failed: ' . $response);
-        }
-        
-        return json_decode($response, true);
+        return $this->makeRequest('/refunds', $data, 'POST', 90);
     }
 }
