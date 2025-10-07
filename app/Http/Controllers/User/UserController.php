@@ -616,14 +616,18 @@ public function initiateHdfcPayment(Request $request)
                 'x-customerid: ' . $customerId,
                 'Content-Type: application/JSON',
                 'version: 2023-06-30',
-                'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg=='
+                'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg==',
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             ],
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 60,
+            CURLOPT_CONNECTTIMEOUT => 20,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_SSL_VERIFYHOST => false,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS => 3
+            CURLOPT_MAXREDIRS => 5,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_FRESH_CONNECT => true,
+            CURLOPT_FORBID_REUSE => true
         ]);
         
         $response = curl_exec($curl);
@@ -672,8 +676,8 @@ public function handlePaymentCallback(Request $request)
         $orderId = $params['order_id'];
         Log::info('Payment Callback Received', ['order_id' => $orderId, 'params' => $params]);
         
-        // Get order status with retry mechanism
-        $maxRetries = 3;
+        // Get order status with extended retry mechanism for UPI/Card payments
+        $maxRetries = 5;
         $order = null;
         
         for ($i = 0; $i < $maxRetries; $i++) {
@@ -686,12 +690,15 @@ public function handlePaymentCallback(Request $request)
                     'x-merchantid: SG3589',
                     'x-customerid: 325345',
                     'Content-Type: application/x-www-form-urlencoded',
-                    'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg=='
+                    'Authorization: Basic RUMyODVFNzc5MkY0Mzk1QkVCRjAyNkQyQjQ4OTkxOg==',
+                    'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
                 ],
-                CURLOPT_TIMEOUT => 15,
-                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_CONNECTTIMEOUT => 10,
                 CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_SSL_VERIFYHOST => false
+                CURLOPT_SSL_VERIFYHOST => false,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_FRESH_CONNECT => true
             ]);
             
             $response = curl_exec($curl);
@@ -705,12 +712,28 @@ public function handlePaymentCallback(Request $request)
             }
             
             if ($i < $maxRetries - 1) {
-                sleep(2); // Wait 2 seconds before retry
+                $delay = ($i + 1) * 3; // Progressive delay: 3s, 6s, 9s, 12s
+                Log::info('Payment verification retry', ['attempt' => $i + 1, 'delay' => $delay]);
+                sleep($delay);
             }
         }
         
         if (!$order) {
-            throw new \Exception('Failed to verify payment status after retries');
+            // Store failed verification for manual check
+            session(['failed_payment_verification' => [
+                'order_id' => $orderId,
+                'timestamp' => time(),
+                'attempts' => $maxRetries
+            ]]);
+            
+            Log::error('Payment verification failed after all retries', [
+                'order_id' => $orderId,
+                'max_retries' => $maxRetries
+            ]);
+            
+            return redirect()->route('dashboard')->with('warning', 
+                'Payment processing in progress. If amount is deducted, your order will be confirmed within 24 hours. Order ID: ' . $orderId
+            );
         }
         
         Log::info('Payment Status Retrieved', ['order' => $order]);
