@@ -19,7 +19,7 @@ class PaymentService
         $this->baseUrl = 'https://smartgatewayuat.hdfcbank.com';
     }
     
-    public function createPaymentSession($orderId, $customerId, $amount)
+    public function createPaymentSession($orderId, $customerId, $amount, $customerEmail = null, $customerPhone = null, $firstName = null, $lastName = null)
     {
         $data = [
             "order_id" => $orderId,
@@ -31,6 +31,11 @@ class PaymentService
             "return_url" => route('hdfc.user.callback'),
             "description" => "Complete your payment"
         ];
+        
+        if ($customerEmail) $data['customer_email'] = $customerEmail;
+        if ($customerPhone) $data['customer_phone'] = $customerPhone;
+        if ($firstName) $data['first_name'] = $firstName;
+        if ($lastName) $data['last_name'] = $lastName;
         
         $curl = curl_init();
         curl_setopt_array($curl, [
@@ -86,8 +91,9 @@ class PaymentService
     
     public function validateHMAC($params)
     {
-        // Implement HMAC validation if required by HDFC
-        return true;
+        // Add proper HMAC validation based on HDFC documentation
+        // For now, basic validation
+        return isset($params['order_id']) && isset($params['status']);
     }
     
     public function getStatusMessage($order)
